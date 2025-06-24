@@ -194,6 +194,7 @@ def main():
         ✅ Value-at-Risk calculations
         ✅ Stress testing scenarios
         ✅ Portfolio health scoring
+        🪙 **Crypto portfolio support**
         """)
         
         # Clear session button
@@ -214,7 +215,6 @@ def main():
             
             st.rerun()
         
-        st.header("📋 Example Portfolios")
         if st.button("Conservative"):
             track_usage('example_portfolio_selected', {'type': 'conservative'})
             st.session_state.portfolio_input = "50% SPY, 30% BND, 20% VTI"
@@ -226,6 +226,21 @@ def main():
         if st.button("Balanced ETF"):
             track_usage('example_portfolio_selected', {'type': 'balanced_etf'})
             st.session_state.portfolio_input = "Equal weight SPY QQQ IWM"
+            st.rerun()
+        
+        # NEW: Crypto portfolios
+        st.markdown("**🪙 Crypto Portfolios**")
+        if st.button("Crypto Core"):
+            track_usage('example_portfolio_selected', {'type': 'crypto_core'})
+            st.session_state.portfolio_input = "60% BTC-USD, 40% ETH-USD"
+            st.rerun()
+        if st.button("Crypto Diversified"):
+            track_usage('example_portfolio_selected', {'type': 'crypto_diversified'})
+            st.session_state.portfolio_input = "40% BTC-USD, 30% ETH-USD, 20% SOL-USD, 10% ADA-USD"
+            st.rerun()
+        if st.button("Stocks + Crypto"):
+            track_usage('example_portfolio_selected', {'type': 'stocks_crypto'})
+            st.session_state.portfolio_input = "40% SPY, 30% QQQ, 20% BTC-USD, 10% ETH-USD"
             st.rerun()
         
         # Analytics summary (for debugging)
@@ -242,8 +257,8 @@ def main():
             "Portfolio Holdings",
             value=st.session_state.get('portfolio_input', ''),
             height=120,
-            placeholder="Enter your portfolio in one of these formats:\n\n• 40% AAPL, 30% MSFT, 20% GOOGL, 10% BND\n• Equal weight SPY QQQ VTI\n• 50% VOO, 50% BND",
-            help="Use percentage format or 'Equal weight' followed by ticker symbols"
+            placeholder="Enter your portfolio in one of these formats:\n\n• 40% AAPL, 30% MSFT, 20% GOOGL, 10% BND\n• Equal weight SPY QQQ VTI\n• 50% VOO, 50% BND\n• 60% BTC-USD, 40% ETH-USD (crypto)",  # ← ADD CRYPTO EXAMPLE
+            help="Use percentage format or 'Equal weight' followed by ticker symbols. Crypto: use -USD suffix (BTC-USD, ETH-USD)"
         )
         
         # Track portfolio input changes
@@ -306,8 +321,10 @@ def main():
             - Portfolio health score
             - Stress test scenarios
             - Visual risk breakdown
+            - 🪙 **Crypto portfolio analysis**
             - Downloadable report
             """)
+            
     
     # Add feedback section at the bottom
     add_feedback_section()
