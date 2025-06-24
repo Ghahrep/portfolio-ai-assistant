@@ -78,7 +78,7 @@ def add_feedback_section():
     st.markdown("**What feature would be most valuable to you?**")
     feature_request = st.text_area(
         "",
-        height=60,
+        height=80,
         placeholder="e.g., Portfolio optimization suggestions, more asset classes, better visualizations, comparison tools...",
         key="feature_request_input"
     )
