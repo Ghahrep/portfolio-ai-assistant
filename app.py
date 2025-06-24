@@ -24,6 +24,279 @@ except ImportError:
     st.error("Portfolio analysis engine not found. Make sure real_data_portfolio.py is in the same directory.")
     ENGINE_AVAILABLE = False
 
+from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class PortfolioHealthMetrics:
+    """Comprehensive portfolio health assessment"""
+    overall_score: float  # 0-100
+    concentration_risk: float  # 0-100
+    correlation_health: float  # 0-100  
+    regime_fitness: float  # 0-100
+    stress_resilience: float  # 0-100
+    factor_balance: float  # 0-100
+    
+    health_level: str  # "Excellent", "Good", "Fair", "Poor"
+    key_risks: List[str]
+    improvement_priorities: List[str]
+
+class EnhancedPortfolioHealthMonitor:
+    """Professional-grade portfolio health monitoring"""
+    
+    def __init__(self):
+        self.health_weights = {
+            'concentration_risk': 0.25,
+            'correlation_health': 0.20,
+            'regime_fitness': 0.20,
+            'stress_resilience': 0.20,
+            'factor_balance': 0.15
+        }
+        
+    def calculate_portfolio_health(self, portfolio: Dict[str, float], 
+                                 analysis_results: Dict) -> PortfolioHealthMetrics:
+        """Calculate comprehensive portfolio health score"""
+        
+        # Individual health components
+        concentration = self._assess_concentration_risk(portfolio)
+        correlation = self._assess_correlation_health(portfolio, analysis_results)
+        regime_fit = self._assess_regime_fitness(portfolio, analysis_results)
+        stress_resilience = self._assess_stress_resilience(analysis_results)
+        factor_balance = self._assess_factor_balance(portfolio)
+        
+        # Calculate weighted overall score
+        component_scores = {
+            'concentration_risk': concentration,
+            'correlation_health': correlation,
+            'regime_fitness': regime_fit,
+            'stress_resilience': stress_resilience,
+            'factor_balance': factor_balance
+        }
+        
+        overall_score = sum(
+            score * self.health_weights[component] 
+            for component, score in component_scores.items()
+        )
+        
+        # Determine health level
+        health_level = self._determine_health_level(overall_score)
+        
+        # Identify key risks and improvements
+        key_risks = self._identify_key_risks(component_scores)
+        improvements = self._generate_improvement_priorities(component_scores)
+        
+        return PortfolioHealthMetrics(
+            overall_score=overall_score,
+            concentration_risk=concentration,
+            correlation_health=correlation,
+            regime_fitness=regime_fit,
+            stress_resilience=stress_resilience,
+            factor_balance=factor_balance,
+            health_level=health_level,
+            key_risks=key_risks,
+            improvement_priorities=improvements
+        )
+    
+    def _assess_concentration_risk(self, portfolio: Dict[str, float]) -> float:
+        """Assess concentration risk (higher score = less concentrated)"""
+        if not portfolio:
+            return 0
+        
+        max_weight = max(portfolio.values())
+        num_positions = len(portfolio)
+        
+        # Penalize high concentration
+        concentration_penalty = max(0, (max_weight - 0.25) * 200)  # Penalty for >25% positions
+        
+        # Reward diversification
+        diversification_bonus = min(50, num_positions * 8)  # Bonus for more positions
+        
+        # Calculate score (0-100)
+        score = max(0, 100 - concentration_penalty + diversification_bonus)
+        return min(100, score)
+    
+    def _assess_correlation_health(self, portfolio: Dict[str, float], 
+                                 analysis_results: Dict) -> float:
+        """Assess correlation health of portfolio"""
+        try:
+            # Extract correlation data from analysis results
+            correlation_matrix = analysis_results.get('model_parameters', {}).get('correlation_matrix')
+            
+            if not correlation_matrix:
+                return 60  # Neutral score if no correlation data
+            
+            correlation_matrix = np.array(correlation_matrix)
+            
+            # Calculate average correlation (excluding diagonal)
+            mask = ~np.eye(correlation_matrix.shape[0], dtype=bool)
+            avg_correlation = np.mean(correlation_matrix[mask])
+            
+            # Optimal correlation is around 0.3-0.5
+            if 0.3 <= avg_correlation <= 0.5:
+                score = 100
+            elif avg_correlation < 0.3:
+                score = 70 + (avg_correlation * 100)  # Low correlation is still good
+            else:
+                score = max(0, 100 - (avg_correlation - 0.5) * 200)  # Penalize high correlation
+            
+            return min(100, max(0, score))
+            
+        except Exception:
+            return 60  # Neutral score on error
+    
+    def _assess_regime_fitness(self, portfolio: Dict[str, float], 
+                             analysis_results: Dict) -> float:
+        """Assess how well portfolio fits current market regime"""
+        
+        # Enhanced regime fitness assessment
+        portfolio_size = len(portfolio)
+        max_weight = max(portfolio.values()) if portfolio else 0
+        
+        # Check for sector concentration (basic heuristic)
+        tech_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA']
+        tech_exposure = sum(portfolio.get(ticker, 0) for ticker in tech_tickers)
+        
+        # Assess based on portfolio characteristics
+        base_score = 70  # Default regime fitness
+        
+        # Penalize high concentration
+        if max_weight > 0.5:
+            base_score -= 30
+        elif max_weight > 0.3:
+            base_score -= 15
+        
+        # Penalize excessive tech concentration
+        if tech_exposure > 0.7:
+            base_score -= 20
+        
+        # Reward diversification
+        if portfolio_size >= 5:
+            base_score += 15
+        
+        return max(20, min(100, base_score))
+    
+    def _assess_stress_resilience(self, analysis_results: Dict) -> float:
+        """Assess portfolio's resilience to stress scenarios"""
+        try:
+            stress_tests = analysis_results.get('stress_tests', {})
+            
+            if not stress_tests:
+                return 60  # Neutral if no stress test data
+            
+            # Average stress test losses
+            stress_losses = []
+            for scenario, results in stress_tests.items():
+                var_loss = abs(results.get('var_95', 0))
+                stress_losses.append(var_loss)
+            
+            if stress_losses:
+                avg_stress_loss = np.mean(stress_losses)
+                
+                # Score based on stress loss severity
+                if avg_stress_loss < 0.15:  # Less than 15% loss
+                    return 90
+                elif avg_stress_loss < 0.25:  # 15-25% loss
+                    return 70
+                elif avg_stress_loss < 0.35:  # 25-35% loss
+                    return 50
+                else:  # >35% loss
+                    return 30
+            
+            return 60
+            
+        except Exception:
+            return 60
+    
+    def _assess_factor_balance(self, portfolio: Dict[str, float]) -> float:
+        """Assess factor balance across portfolio"""
+        
+        if not portfolio:
+            return 0
+            
+        # Simple factor balance assessment based on portfolio characteristics
+        num_positions = len(portfolio)
+        max_weight = max(portfolio.values())
+        
+        # Check for sector diversity (basic implementation)
+        tech_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA']
+        financial_tickers = ['JPM', 'BAC', 'WFC', 'C', 'GS']
+        bond_tickers = ['BND', 'TLT', 'AGG', 'IEF']
+        
+        tech_exposure = sum(portfolio.get(ticker, 0) for ticker in tech_tickers)
+        financial_exposure = sum(portfolio.get(ticker, 0) for ticker in financial_tickers)
+        bond_exposure = sum(portfolio.get(ticker, 0) for ticker in bond_tickers)
+        
+        # Base score from position count
+        position_score = min(40, num_positions * 6)
+        
+        # Concentration penalty
+        concentration_penalty = max(0, (max_weight - 0.2) * 100)
+        
+        # Sector balance bonus
+        sector_balance = 0
+        if tech_exposure < 0.5:  # Not too tech heavy
+            sector_balance += 15
+        if bond_exposure > 0.1:  # Some defensive allocation
+            sector_balance += 15
+        if financial_exposure > 0.05:  # Some financial exposure
+            sector_balance += 10
+        
+        total_score = position_score + sector_balance - concentration_penalty
+        return max(0, min(100, total_score))
+    
+    def _determine_health_level(self, overall_score: float) -> str:
+        """Determine health level from overall score"""
+        if overall_score >= 85:
+            return "Excellent"
+        elif overall_score >= 70:
+            return "Good"
+        elif overall_score >= 50:
+            return "Fair"
+        else:
+            return "Poor"
+    
+    def _identify_key_risks(self, component_scores: Dict[str, float]) -> List[str]:
+        """Identify the most significant portfolio risks"""
+        risks = []
+        
+        if component_scores['concentration_risk'] < 60:
+            risks.append("High concentration risk - consider diversifying large positions")
+        
+        if component_scores['correlation_health'] < 60:
+            risks.append("High correlation between holdings - limited diversification benefit")
+        
+        if component_scores['stress_resilience'] < 60:
+            risks.append("Poor stress test performance - vulnerable to market downturns")
+        
+        if component_scores['factor_balance'] < 60:
+            risks.append("Imbalanced factor exposures - concentrated investment style risk")
+        
+        if component_scores['regime_fitness'] < 60:
+            risks.append("Poor current market regime fit - consider tactical adjustments")
+        
+        return risks[:3]  # Return top 3 risks
+    
+    def _generate_improvement_priorities(self, component_scores: Dict[str, float]) -> List[str]:
+        """Generate prioritized improvement recommendations"""
+        improvements = []
+        
+        # Sort components by score (lowest first = highest priority)
+        sorted_components = sorted(component_scores.items(), key=lambda x: x[1])
+        
+        improvement_map = {
+            'concentration_risk': "Reduce position sizes and add more holdings",
+            'correlation_health': "Add uncorrelated assets to improve diversification", 
+            'stress_resilience': "Include defensive assets for downside protection",
+            'factor_balance': "Balance growth/value and size exposures",
+            'regime_fitness': "Adjust allocation for current market conditions"
+        }
+        
+        for component, score in sorted_components:
+            if score < 70:  # Only suggest improvements for weak areas
+                improvements.append(improvement_map[component])
+        
+        return improvements[:3]  # Return top 3 priorities
+
 # ============================================================================
 # ANALYTICS TRACKING FUNCTIONS
 # ============================================================================
