@@ -25,7 +25,7 @@ except ImportError:
     ENGINE_AVAILABLE = False
 
 from dataclasses import dataclass
-from typing import List
+from typing import List,Dict
 
 @dataclass
 class PortfolioHealthMetrics:
@@ -777,7 +777,7 @@ def display_detailed_analysis(context, portfolio_value, response):
     st.markdown(f"### {risk_color[risk_level]} Risk Level: {risk_level}")
     
     # Portfolio Health Score
-    display_health_analysis(portfolio)
+    display_enhanced_health_analysis(portfolio)
     
     # Stress Testing Results
     display_stress_tests(analysis_data, portfolio_value)
@@ -803,40 +803,40 @@ def display_detailed_analysis(context, portfolio_value, response):
         track_usage('detailed_report_downloaded')
         create_detailed_download(context, portfolio_value, response)
 
-def display_health_analysis(portfolio):
-    """Display portfolio health analysis"""
-    st.markdown("### 🏥 Portfolio Health Assessment")
-    track_usage('health_analysis_displayed')
+def display_enhanced_health_analysis(portfolio, analysis_data):
+    """Display enhanced portfolio health analysis with 5-factor scoring"""
+    st.markdown("### 🏥 Enhanced Portfolio Health Assessment")
+    track_usage('enhanced_health_analysis_displayed')
     
     if not portfolio:
         st.warning("No portfolio data available for health analysis")
         return
     
-    # Calculate health score based on portfolio
-    max_weight = max(portfolio.values())
-    n_positions = len(portfolio)
+    # Initialize enhanced health monitor
+    enhanced_health_monitor = EnhancedPortfolioHealthMonitor()
+    health_metrics = enhanced_health_monitor.calculate_portfolio_health(portfolio, analysis_data)
     
-    concentration_score = max(0, 100 - max_weight * 200)
-    diversification_score = min(100, n_positions * 15)
-    overall_score = (concentration_score * 0.6 + diversification_score * 0.4)
+    # Health level with emoji
+    health_emoji = {
+        'Excellent': '🟢',
+        'Good': '🟡', 
+        'Fair': '🟠',
+        'Poor': '🔴'
+    }.get(health_metrics.health_level, '🟡')
     
-    health_level = "Excellent" if overall_score >= 80 else "Good" if overall_score >= 60 else "Fair" if overall_score >= 40 else "Poor"
+    st.markdown(f"#### {health_emoji} Portfolio Health: {health_metrics.health_level}")
+    st.markdown(f"**Overall Health Score: {health_metrics.overall_score:.1f}/100**")
     
-    # Track health score
-    track_usage('health_score_calculated', {
-        'health_level': health_level,
-        'overall_score': overall_score,
-        'max_weight': max_weight,
-        'n_positions': n_positions
-    })
+    # Enhanced health metrics breakdown with 5 factors
+    st.markdown("#### 📊 Professional 5-Factor Health Analysis")
     
     col1, col2 = st.columns([1, 2])
     
     with col1:
-        # Health score gauge
+        # Enhanced health score gauge
         fig_gauge = go.Figure(go.Indicator(
             mode = "gauge+number",
-            value = overall_score,
+            value = health_metrics.overall_score,
             domain = {'x': [0, 1], 'y': [0, 1]},
             title = {'text': "Health Score"},
             gauge = {
@@ -844,7 +844,9 @@ def display_health_analysis(portfolio):
                 'bar': {'color': "darkblue"},
                 'steps': [
                     {'range': [0, 50], 'color': "lightgray"},
-                    {'range': [50, 80], 'color': "gray"}
+                    {'range': [50, 70], 'color': "yellow"},
+                    {'range': [70, 85], 'color': "lightgreen"},
+                    {'range': [85, 100], 'color': "green"}
                 ],
                 'threshold': {
                     'line': {'color': "red", 'width': 4},
@@ -858,23 +860,83 @@ def display_health_analysis(portfolio):
         st.plotly_chart(fig_gauge, use_container_width=True)
     
     with col2:
-        st.markdown(f"**Overall Health: {health_level}**")
-        st.markdown(f"**Score: {overall_score:.0f}/100**")
+        st.markdown("**Professional 5-Factor Health Breakdown:**")
         
-        # Health metrics breakdown
-        st.markdown("**Health Breakdown:**")
-        st.progress(concentration_score/100, text=f"Concentration Risk: {concentration_score:.0f}/100")
-        st.progress(diversification_score/100, text=f"Diversification: {diversification_score:.0f}/100")
+        # Progress bars for each factor
+        factors = [
+            ("Concentration Risk", health_metrics.concentration_risk, "Position size assessment"),
+            ("Correlation Health", health_metrics.correlation_health, "Diversification effectiveness"),
+            ("Regime Fitness", health_metrics.regime_fitness, "Market adaptation assessment"),
+            ("Stress Resilience", health_metrics.stress_resilience, "Crisis protection level"),
+            ("Factor Balance", health_metrics.factor_balance, "Style diversification assessment")
+        ]
         
-        # Key insights
-        if max_weight > 0.3:
-            st.warning(f"⚠️ High concentration: {max_weight:.1%} in single position")
-            track_usage('high_concentration_warning', {'max_weight': max_weight})
-        if n_positions < 5:
-            st.warning("⚠️ Limited diversification - consider adding more positions")
-            track_usage('low_diversification_warning', {'n_positions': n_positions})
-        if overall_score >= 70:
-            st.success("✅ Portfolio health looks good!")
+        for factor_name, score, description in factors:
+            # Color coding for progress bars
+            if score >= 80:
+                color = "🟢"
+            elif score >= 60:
+                color = "🟡"
+            else:
+                color = "🔴"
+            
+            st.markdown(f"**{color} {factor_name}**: {score:.0f}/100")
+            st.progress(score/100, text=description)
+            st.markdown("")  # Add spacing
+    
+    # Enhanced risk identification
+    if health_metrics.key_risks:
+        st.markdown("#### ⚠️ Key Health Risks Identified")
+        for i, risk in enumerate(health_metrics.key_risks, 1):
+            st.markdown(f"{i}. {risk}")
+    
+    # Enhanced improvement priorities  
+    if health_metrics.improvement_priorities:
+        st.markdown("#### 🎯 Health Improvement Priorities")
+        for i, improvement in enumerate(health_metrics.improvement_priorities, 1):
+            st.markdown(f"{i}. {improvement}")
+    
+    # Professional insights based on score
+    st.markdown("#### 💡 Professional Health Insights")
+    
+    if health_metrics.overall_score >= 85:
+        st.success("✅ **Excellent Portfolio Health** - Your portfolio demonstrates professional-grade risk management with strong diversification and appropriate factor balance.")
+    elif health_metrics.overall_score >= 70:
+        st.info("🟡 **Good Portfolio Health** - Solid foundation with minor optimization opportunities identified.")
+    elif health_metrics.overall_score >= 50:
+        st.warning("🟠 **Fair Portfolio Health** - Several improvement areas identified that could enhance risk-adjusted returns.")
+    else:
+        st.error("🔴 **Poor Portfolio Health** - Immediate attention recommended to address concentration and diversification risks.")
+    
+    # Enhanced recommendations section
+    st.markdown("#### 🚀 Enhanced Health Improvement Actions")
+    
+    # Specific recommendations based on weak areas
+    weak_areas = [area for area, score in [
+        ('concentration_risk', health_metrics.concentration_risk),
+        ('correlation_health', health_metrics.correlation_health),
+        ('regime_fitness', health_metrics.regime_fitness),
+        ('stress_resilience', health_metrics.stress_resilience),
+        ('factor_balance', health_metrics.factor_balance)
+    ] if score < 70]
+    
+    if weak_areas:
+        for area in weak_areas:
+            if area == 'concentration_risk':
+                st.markdown("• **Reduce Concentration**: Consider limiting single positions to <20% of portfolio")
+            elif area == 'correlation_health':
+                st.markdown("• **Improve Diversification**: Add uncorrelated asset classes (international, bonds, REITs)")
+            elif area == 'regime_fitness':
+                st.markdown("• **Adjust for Market Regime**: Consider current market conditions in allocation")
+            elif area == 'stress_resilience':
+                st.markdown("• **Add Defensive Assets**: Include treasury bonds or defensive sectors")
+            elif area == 'factor_balance':
+                st.markdown("• **Balance Investment Styles**: Mix growth/value and large/small cap exposures")
+    else:
+        st.markdown("• **Maintain Current Strategy**: Your portfolio health metrics are strong across all factors")
+    
+    st.markdown("• **Regular Monitoring**: Review health scores monthly and rebalance quarterly")
+    st.markdown("• **Professional Consultation**: Consider financial advisor review for complex strategies")
 
 def display_stress_tests(analysis_data, portfolio_value):
     """Display stress testing scenarios"""
