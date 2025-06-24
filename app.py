@@ -297,6 +297,392 @@ class EnhancedPortfolioHealthMonitor:
         
         return improvements[:3]  # Return top 3 priorities
 
+def create_performance_charts(analysis_data, portfolio_value, portfolio):
+    """
+    Create comprehensive performance charts - NEW USER-REQUESTED FEATURE!
+    """
+    
+    st.markdown("### 📈 Portfolio Performance Analysis")
+    st.info("💡 **New Feature!** Added based on user feedback: 'Can I plot returns and drawdowns?'")
+    
+    # Extract portfolio returns from analysis
+    base_case = analysis_data.get('base_case', {})
+    portfolio_returns = base_case.get('portfolio_returns', [])
+    
+    if len(portfolio_returns) == 0:
+        st.warning("No return data available for charting")
+        return
+    
+    # Create tabs for different chart views
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Cumulative Returns", "📉 Drawdown Analysis", "📋 Performance Stats", "🔄 Rolling Metrics"])
+    
+    with tab1:
+        display_cumulative_returns_chart(portfolio_returns, portfolio)
+    
+    with tab2:
+        display_drawdown_chart(portfolio_returns, portfolio)
+    
+    with tab3:
+        display_performance_statistics(portfolio_returns, portfolio_value, analysis_data)
+    
+    with tab4:
+        display_rolling_metrics_chart(portfolio_returns, portfolio)
+
+def display_cumulative_returns_chart(portfolio_returns, portfolio):
+    """Display cumulative returns over time"""
+    
+    st.markdown("#### 📈 Cumulative Portfolio Returns")
+    
+    # Calculate cumulative returns
+    cumulative_returns = np.cumsum(portfolio_returns)
+    cumulative_pct = (np.exp(cumulative_returns) - 1) * 100
+    
+    # Create the chart
+    fig_returns = go.Figure()
+    
+    # Add portfolio returns line
+    fig_returns.add_trace(go.Scatter(
+        x=list(range(len(cumulative_pct))),
+        y=cumulative_pct,
+        mode='lines',
+        name='Portfolio Returns',
+        line=dict(color='#2E86AB', width=3),
+        hovertemplate='Day %{x}<br>Return: %{y:.2f}%<extra></extra>'
+    ))
+    
+    # Add zero line for reference
+    fig_returns.add_hline(y=0, line_dash="dash", line_color="gray", 
+                         annotation_text="Break-even")
+    
+    # Highlight best and worst periods
+    if len(cumulative_pct) > 10:
+        max_return_idx = np.argmax(cumulative_pct)
+        min_return_idx = np.argmin(cumulative_pct)
+        
+        # Mark peak
+        fig_returns.add_trace(go.Scatter(
+            x=[max_return_idx],
+            y=[cumulative_pct[max_return_idx]],
+            mode='markers',
+            marker=dict(color='green', size=10, symbol='circle'),
+            name='Peak Return',
+            hovertemplate=f'Peak: {cumulative_pct[max_return_idx]:.2f}%<extra></extra>'
+        ))
+        
+        # Mark trough
+        fig_returns.add_trace(go.Scatter(
+            x=[min_return_idx],
+            y=[cumulative_pct[min_return_idx]],
+            mode='markers',
+            marker=dict(color='red', size=10, symbol='circle'),
+            name='Lowest Point',
+            hovertemplate=f'Trough: {cumulative_pct[min_return_idx]:.2f}%<extra></extra>'
+        ))
+    
+    # Update layout
+    fig_returns.update_layout(
+        title="Cumulative Portfolio Returns Over Time",
+        xaxis_title="Trading Days",
+        yaxis_title="Cumulative Return (%)",
+        height=450,
+        showlegend=True,
+        hovermode='x unified'
+    )
+    
+    st.plotly_chart(fig_returns, use_container_width=True)
+    
+    # Key insights
+    total_return = cumulative_pct[-1]
+    best_day = np.max(np.diff(cumulative_pct)) if len(cumulative_pct) > 1 else 0
+    worst_day = np.min(np.diff(cumulative_pct)) if len(cumulative_pct) > 1 else 0
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Return", f"{total_return:.2f}%")
+    with col2:
+        st.metric("Best Day", f"{best_day:.2f}%", delta_color="normal")
+    with col3:
+        st.metric("Worst Day", f"{worst_day:.2f}%", delta_color="inverse")
+
+def display_drawdown_chart(portfolio_returns, portfolio):
+    """Display underwater/drawdown chart"""
+    
+    st.markdown("#### 📉 Portfolio Drawdown Analysis")
+    st.info("Drawdown shows how far the portfolio is below its previous peak")
+    
+    # Calculate drawdowns
+    cumulative_returns = np.cumsum(portfolio_returns)
+    running_max = np.maximum.accumulate(cumulative_returns)
+    drawdown = cumulative_returns - running_max
+    drawdown_pct = drawdown * 100  # Convert to percentage
+    
+    # Create underwater chart
+    fig_drawdown = go.Figure()
+    
+    # Add drawdown area chart (underwater curve)
+    fig_drawdown.add_trace(go.Scatter(
+        x=list(range(len(drawdown_pct))),
+        y=drawdown_pct,
+        mode='lines',
+        fill='tonexty',
+        fillcolor='rgba(255, 0, 0, 0.3)',
+        line=dict(color='red', width=2),
+        name='Drawdown',
+        hovertemplate='Day %{x}<br>Drawdown: %{y:.2f}%<extra></extra>'
+    ))
+    
+    # Add zero line
+    fig_drawdown.add_hline(y=0, line_dash="solid", line_color="black", 
+                          annotation_text="Peak Level")
+    
+    # Highlight maximum drawdown
+    max_drawdown_idx = np.argmin(drawdown_pct)
+    max_drawdown_value = drawdown_pct[max_drawdown_idx]
+    
+    fig_drawdown.add_trace(go.Scatter(
+        x=[max_drawdown_idx],
+        y=[max_drawdown_value],
+        mode='markers',
+        marker=dict(color='darkred', size=12, symbol='x'),
+        name='Max Drawdown',
+        hovertemplate=f'Max Drawdown: {max_drawdown_value:.2f}%<extra></extra>'
+    ))
+    
+    # Update layout
+    fig_drawdown.update_layout(
+        title="Portfolio Drawdown (Underwater Chart)",
+        xaxis_title="Trading Days",
+        yaxis_title="Drawdown (%)",
+        height=450,
+        showlegend=True,
+        hovermode='x unified'
+    )
+    
+    st.plotly_chart(fig_drawdown, use_container_width=True)
+    
+    # Drawdown statistics
+    max_drawdown = abs(max_drawdown_value)
+    
+    # Calculate recovery time (simplified)
+    underwater_periods = np.where(drawdown_pct < -0.5)[0]  # Periods with >0.5% drawdown
+    avg_underwater_time = len(underwater_periods) / len(drawdown_pct) * 100 if len(underwater_periods) > 0 else 0
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Maximum Drawdown", f"{max_drawdown:.2f}%", delta_color="inverse")
+    with col2:
+        st.metric("Time Underwater", f"{avg_underwater_time:.1f}%", 
+                 help="Percentage of time portfolio was below its peak")
+    with col3:
+        current_drawdown = abs(drawdown_pct[-1]) if drawdown_pct[-1] < 0 else 0
+        st.metric("Current Drawdown", f"{current_drawdown:.2f}%", delta_color="inverse")
+
+# DAY 2 AFTERNOON: Performance Statistics (3 hours)
+
+def display_performance_statistics(portfolio_returns, portfolio_value, analysis_data):
+    """Display comprehensive performance statistics table"""
+    
+    st.markdown("#### 📋 Detailed Performance Statistics")
+    
+    # Calculate performance metrics
+    total_days = len(portfolio_returns)
+    cumulative_returns = np.cumsum(portfolio_returns)
+    
+    # Return metrics
+    total_return = (np.exp(cumulative_returns[-1]) - 1) * 100
+    annualized_return = ((1 + total_return/100) ** (252/total_days) - 1) * 100 if total_days > 0 else 0
+    
+    # Risk metrics  
+    daily_vol = np.std(portfolio_returns) * 100
+    annualized_vol = daily_vol * np.sqrt(252)
+    
+    # Risk-adjusted metrics
+    sharpe_ratio = (annualized_return - 2) / annualized_vol if annualized_vol > 0 else 0  # Assuming 2% risk-free rate
+    
+    # Drawdown metrics
+    cumulative_returns_series = np.cumsum(portfolio_returns)
+    running_max = np.maximum.accumulate(cumulative_returns_series)
+    drawdown = cumulative_returns_series - running_max
+    max_drawdown = abs(np.min(drawdown)) * 100
+    
+    # Win/Loss metrics
+    positive_days = np.sum(portfolio_returns > 0)
+    negative_days = np.sum(portfolio_returns < 0)
+    win_rate = (positive_days / total_days) * 100 if total_days > 0 else 0
+    
+    # Best/Worst days
+    best_day = np.max(portfolio_returns) * 100 if len(portfolio_returns) > 0 else 0
+    worst_day = np.min(portfolio_returns) * 100 if len(portfolio_returns) > 0 else 0
+    
+    # Create performance metrics table
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**📈 Return Metrics**")
+        st.write(f"• **Total Return**: {total_return:.2f}%")
+        st.write(f"• **Annualized Return**: {annualized_return:.2f}%")
+        st.write(f"• **Best Day**: {best_day:.2f}%")
+        st.write(f"• **Worst Day**: {worst_day:.2f}%")
+        st.write(f"• **Win Rate**: {win_rate:.1f}%")
+        
+        st.markdown("**⚡ Risk Metrics**")
+        st.write(f"• **Daily Volatility**: {daily_vol:.2f}%")
+        st.write(f"• **Annualized Volatility**: {annualized_vol:.2f}%")
+        st.write(f"• **Maximum Drawdown**: {max_drawdown:.2f}%")
+    
+    with col2:
+        st.markdown("**🎯 Risk-Adjusted Metrics**")
+        st.write(f"• **Sharpe Ratio**: {sharpe_ratio:.2f}")
+        
+        # Add Calmar ratio (return/max drawdown)
+        calmar_ratio = annualized_return / max_drawdown if max_drawdown > 0 else 0
+        st.write(f"• **Calmar Ratio**: {calmar_ratio:.2f}")
+        
+        # Add some portfolio composition stats
+        st.markdown("**📊 Portfolio Stats**")
+        st.write(f"• **Analysis Period**: {total_days} trading days")
+        st.write(f"• **Positive Days**: {positive_days} ({win_rate:.1f}%)")
+        st.write(f"• **Negative Days**: {negative_days} ({100-win_rate:.1f}%)")
+    
+    # Performance grade
+    st.markdown("#### 🏆 Performance Grade")
+    
+    # Simple grading system
+    grade_score = 0
+    if annualized_return > 15:
+        grade_score += 25
+    elif annualized_return > 10:
+        grade_score += 20
+    elif annualized_return > 5:
+        grade_score += 15
+    
+    if sharpe_ratio > 1.5:
+        grade_score += 25
+    elif sharpe_ratio > 1.0:
+        grade_score += 20
+    elif sharpe_ratio > 0.5:
+        grade_score += 15
+    
+    if max_drawdown < 10:
+        grade_score += 25
+    elif max_drawdown < 20:
+        grade_score += 20
+    elif max_drawdown < 30:
+        grade_score += 15
+    
+    if win_rate > 60:
+        grade_score += 25
+    elif win_rate > 55:
+        grade_score += 20
+    elif win_rate > 50:
+        grade_score += 15
+    
+    # Assign letter grade
+    if grade_score >= 90:
+        grade = "A+ (Excellent)"
+        grade_color = "success"
+    elif grade_score >= 80:
+        grade = "A (Very Good)"
+        grade_color = "success"
+    elif grade_score >= 70:
+        grade = "B (Good)"
+        grade_color = "info"
+    elif grade_score >= 60:
+        grade = "C (Average)"
+        grade_color = "warning"
+    else:
+        grade = "D (Below Average)"
+        grade_color = "error"
+    
+    if grade_color == "success":
+        st.success(f"**Portfolio Performance Grade: {grade}**")
+    elif grade_color == "info":
+        st.info(f"**Portfolio Performance Grade: {grade}**")
+    elif grade_color == "warning":
+        st.warning(f"**Portfolio Performance Grade: {grade}**")
+    else:
+        st.error(f"**Portfolio Performance Grade: {grade}**")
+
+def display_rolling_metrics_chart(portfolio_returns, portfolio):
+    """Display rolling performance metrics"""
+    
+    st.markdown("#### 🔄 Rolling Performance Metrics")
+    st.info("Rolling metrics show how performance changes over time")
+    
+    if len(portfolio_returns) < 30:
+        st.warning("Need at least 30 days of data for rolling metrics")
+        return
+    
+    # Calculate rolling metrics (30-day window)
+    window = min(30, len(portfolio_returns) // 3)
+    
+    rolling_returns = []
+    rolling_volatility = []
+    rolling_sharpe = []
+    
+    for i in range(window, len(portfolio_returns)):
+        window_returns = portfolio_returns[i-window:i]
+        
+        # Rolling return (annualized)
+        cum_return = np.sum(window_returns)
+        ann_return = (np.exp(cum_return) - 1) * (252/window) * 100
+        rolling_returns.append(ann_return)
+        
+        # Rolling volatility (annualized)
+        vol = np.std(window_returns) * np.sqrt(252) * 100
+        rolling_volatility.append(vol)
+        
+        # Rolling Sharpe ratio
+        sharpe = (ann_return - 2) / vol if vol > 0 else 0
+        rolling_sharpe.append(sharpe)
+    
+    # Create rolling metrics chart
+    fig_rolling = make_subplots(
+        rows=3, cols=1,
+        subplot_titles=('Rolling Returns (%)', 'Rolling Volatility (%)', 'Rolling Sharpe Ratio'),
+        vertical_spacing=0.1
+    )
+    
+    x_axis = list(range(window, len(portfolio_returns)))
+    
+    # Rolling returns
+    fig_rolling.add_trace(
+        go.Scatter(x=x_axis, y=rolling_returns, name='Rolling Returns', 
+                  line=dict(color='blue')), row=1, col=1
+    )
+    
+    # Rolling volatility
+    fig_rolling.add_trace(
+        go.Scatter(x=x_axis, y=rolling_volatility, name='Rolling Volatility',
+                  line=dict(color='orange')), row=2, col=1
+    )
+    
+    # Rolling Sharpe
+    fig_rolling.add_trace(
+        go.Scatter(x=x_axis, y=rolling_sharpe, name='Rolling Sharpe',
+                  line=dict(color='green')), row=3, col=1
+    )
+    
+    # Add zero line for Sharpe ratio
+    fig_rolling.add_hline(y=0, line_dash="dash", line_color="gray", row=3, col=1)
+    
+    fig_rolling.update_layout(height=800, showlegend=False)
+    fig_rolling.update_xaxes(title_text="Trading Days", row=3, col=1)
+    
+    st.plotly_chart(fig_rolling, use_container_width=True)
+    
+    # Rolling metrics summary
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        avg_rolling_return = np.mean(rolling_returns)
+        st.metric("Avg Rolling Return", f"{avg_rolling_return:.1f}%")
+    with col2:
+        avg_rolling_vol = np.mean(rolling_volatility)
+        st.metric("Avg Rolling Volatility", f"{avg_rolling_vol:.1f}%")
+    with col3:
+        avg_rolling_sharpe = np.mean(rolling_sharpe)
+        st.metric("Avg Rolling Sharpe", f"{avg_rolling_sharpe:.2f}")
+
 # ============================================================================
 # ANALYTICS TRACKING FUNCTIONS
 # ============================================================================
