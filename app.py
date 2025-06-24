@@ -77,9 +77,11 @@ def add_feedback_section():
     # Feature request section
     st.markdown("**What feature would be most valuable to you?**")
     feature_request = st.text_area(
+        "Feature Request",  # Proper label for accessibility
         height=80,
-        placeholder="e.g., Portfolio optimization suggestions, more asset classes, better visualizations, comparison tools...",
-        key="feature_request_input"
+        placeholder="e.g., Portfolio optimization suggestions...",
+        key="feature_request_input",
+        label_visibility="hidden"  # Hide label since we have markdown above
     )
     
     if st.button("📝 Submit Feature Request", key="submit_feature") and feature_request.strip():
