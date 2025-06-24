@@ -1167,6 +1167,10 @@ def display_detailed_analysis(context, portfolio_value, response):
     
     # Stress Testing Results
     display_stress_tests(analysis_data, portfolio_value)
+
+    if analysis_data and portfolio:
+        track_usage('performance_charts_displayed')
+        create_performance_charts(analysis_data, portfolio_value, portfolio)
     
     # Data Source Information
     st.markdown("### 📅 Analysis Details")
