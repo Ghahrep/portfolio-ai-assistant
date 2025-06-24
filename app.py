@@ -297,6 +297,103 @@ class EnhancedPortfolioHealthMonitor:
         
         return improvements[:3]  # Return top 3 priorities
 
+
+# ============================================================================
+# ANALYTICS TRACKING FUNCTIONS
+# ============================================================================
+
+def initialize_session():
+    """Initialize session tracking"""
+    if 'session_id' not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())[:8]
+    
+    if 'usage_analytics' not in st.session_state:
+        st.session_state.usage_analytics = []
+    
+    if 'session_start_time' not in st.session_state:
+        st.session_state.session_start_time = datetime.now()
+
+def track_usage(event_type, portfolio_data=None, error_data=None):
+    """Track user interactions for market validation"""
+    
+    event = {
+        'timestamp': datetime.now().isoformat(),
+        'event_type': event_type,
+        'session_id': st.session_state.get('session_id', 'unknown'),
+        'session_duration': (datetime.now() - st.session_state.get('session_start_time', datetime.now())).total_seconds(),
+        'portfolio_data': portfolio_data,
+        'error_data': error_data
+    }
+    
+    st.session_state.usage_analytics.append(event)
+    
+    # For development - remove in production
+    print(f"📊 Analytics: {event_type} | Session: {event['session_id']}")
+
+def add_feedback_section():
+    """Add simple feedback collection"""
+    
+    st.markdown("---")
+    st.markdown("### 💡 Help Us Improve This Tool")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("👍 This was helpful!", key="positive_feedback"):
+            track_usage('positive_feedback')
+            st.success("Thanks for the feedback! 🙏")
+    
+    with col2:
+        if st.button("👎 Needs improvement", key="negative_feedback"):
+            track_usage('negative_feedback')  
+            st.success("Thanks! We're working on improvements. 🔧")
+    
+    # Feature request section
+    st.markdown("**What feature would be most valuable to you?**")
+    feature_request = st.text_area(
+        "Feature Request",
+        height=80,
+        placeholder="e.g., Portfolio optimization suggestions, more asset classes, better visualizations, comparison tools...",
+        key="feature_request_input",
+        label_visibility="hidden"
+    )
+    
+    if st.button("📝 Submit Feature Request", key="submit_feature") and feature_request.strip():
+        track_usage('feature_request', {'request': feature_request.strip()})
+        st.success("Feature request recorded! This helps us prioritize development. 🚀")
+
+def display_analytics_summary():
+    """Display analytics summary for admin only"""
+    
+    # Admin password protection
+    admin_password = st.sidebar.text_input("Admin Access", type="password", key="admin_pw")
+    
+    if admin_password == "Gertie78*":  # Change this password!
+        if st.sidebar.checkbox("🔍 Show Analytics (Admin)", value=False):
+            with st.sidebar.expander("Analytics Data"):
+                analytics = st.session_state.get('usage_analytics', [])
+                st.write(f"**Session ID**: {st.session_state.get('session_id', 'None')}")
+                st.write(f"**Events Tracked**: {len(analytics)}")
+                
+                if analytics:
+                    event_types = {}
+                    for event in analytics:
+                        event_type = event['event_type']
+                        event_types[event_type] = event_types.get(event_type, 0) + 1
+                    
+                    st.write("**Event Summary**:")
+                    for event_type, count in event_types.items():
+                        st.write(f"• {event_type}: {count}")
+                    
+                    # Add download button for analytics
+                    if st.button("📥 Download Analytics Report", key="download_analytics"):
+                        create_analytics_download(analytics)
+                    
+                    # Add manual copy option as backup
+                    if st.button("📋 Copy Analytics Report", key="copy_analytics"):
+                        display_analytics_text(analytics)
+    elif admin_password:
+        st.sidebar.error("❌ Invalid admin password")
 def create_performance_charts(analysis_data, portfolio_value, portfolio):
     """
     Create comprehensive performance charts - NEW USER-REQUESTED FEATURE!
@@ -476,8 +573,6 @@ def display_drawdown_chart(portfolio_returns, portfolio):
     with col3:
         current_drawdown = abs(drawdown_pct[-1]) if drawdown_pct[-1] < 0 else 0
         st.metric("Current Drawdown", f"{current_drawdown:.2f}%", delta_color="inverse")
-
-# DAY 2 AFTERNOON: Performance Statistics (3 hours)
 
 def display_performance_statistics(portfolio_returns, portfolio_value, analysis_data):
     """Display comprehensive performance statistics table"""
@@ -683,102 +778,7 @@ def display_rolling_metrics_chart(portfolio_returns, portfolio):
         avg_rolling_sharpe = np.mean(rolling_sharpe)
         st.metric("Avg Rolling Sharpe", f"{avg_rolling_sharpe:.2f}")
 
-# ============================================================================
-# ANALYTICS TRACKING FUNCTIONS
-# ============================================================================
 
-def initialize_session():
-    """Initialize session tracking"""
-    if 'session_id' not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())[:8]
-    
-    if 'usage_analytics' not in st.session_state:
-        st.session_state.usage_analytics = []
-    
-    if 'session_start_time' not in st.session_state:
-        st.session_state.session_start_time = datetime.now()
-
-def track_usage(event_type, portfolio_data=None, error_data=None):
-    """Track user interactions for market validation"""
-    
-    event = {
-        'timestamp': datetime.now().isoformat(),
-        'event_type': event_type,
-        'session_id': st.session_state.get('session_id', 'unknown'),
-        'session_duration': (datetime.now() - st.session_state.get('session_start_time', datetime.now())).total_seconds(),
-        'portfolio_data': portfolio_data,
-        'error_data': error_data
-    }
-    
-    st.session_state.usage_analytics.append(event)
-    
-    # For development - remove in production
-    print(f"📊 Analytics: {event_type} | Session: {event['session_id']}")
-
-def add_feedback_section():
-    """Add simple feedback collection"""
-    
-    st.markdown("---")
-    st.markdown("### 💡 Help Us Improve This Tool")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("👍 This was helpful!", key="positive_feedback"):
-            track_usage('positive_feedback')
-            st.success("Thanks for the feedback! 🙏")
-    
-    with col2:
-        if st.button("👎 Needs improvement", key="negative_feedback"):
-            track_usage('negative_feedback')  
-            st.success("Thanks! We're working on improvements. 🔧")
-    
-    # Feature request section
-    st.markdown("**What feature would be most valuable to you?**")
-    feature_request = st.text_area(
-        "Feature Request",
-        height=80,
-        placeholder="e.g., Portfolio optimization suggestions, more asset classes, better visualizations, comparison tools...",
-        key="feature_request_input",
-        label_visibility="hidden"
-    )
-    
-    if st.button("📝 Submit Feature Request", key="submit_feature") and feature_request.strip():
-        track_usage('feature_request', {'request': feature_request.strip()})
-        st.success("Feature request recorded! This helps us prioritize development. 🚀")
-
-def display_analytics_summary():
-    """Display analytics summary for admin only"""
-    
-    # Admin password protection
-    admin_password = st.sidebar.text_input("Admin Access", type="password", key="admin_pw")
-    
-    if admin_password == "Gertie78*":  # Change this password!
-        if st.sidebar.checkbox("🔍 Show Analytics (Admin)", value=False):
-            with st.sidebar.expander("Analytics Data"):
-                analytics = st.session_state.get('usage_analytics', [])
-                st.write(f"**Session ID**: {st.session_state.get('session_id', 'None')}")
-                st.write(f"**Events Tracked**: {len(analytics)}")
-                
-                if analytics:
-                    event_types = {}
-                    for event in analytics:
-                        event_type = event['event_type']
-                        event_types[event_type] = event_types.get(event_type, 0) + 1
-                    
-                    st.write("**Event Summary**:")
-                    for event_type, count in event_types.items():
-                        st.write(f"• {event_type}: {count}")
-                    
-                    # Add download button for analytics
-                    if st.button("📥 Download Analytics Report", key="download_analytics"):
-                        create_analytics_download(analytics)
-                    
-                    # Add manual copy option as backup
-                    if st.button("📋 Copy Analytics Report", key="copy_analytics"):
-                        display_analytics_text(analytics)
-    elif admin_password:
-        st.sidebar.error("❌ Invalid admin password")
 
 # ============================================================================
 # ORIGINAL APP CODE WITH TRACKING INTEGRATED
