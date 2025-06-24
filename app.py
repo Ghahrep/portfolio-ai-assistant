@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Portfolio Risk Analyzer MVP
-Simplified version focusing on core value: real data portfolio analysis
+Portfolio Risk Analyzer MVP with Barebones AI Assistant
+Simplified version with conversational AI features
 """
 
 import streamlit as st
@@ -20,7 +20,7 @@ except ImportError:
     ENGINE_AVAILABLE = False
 
 # ============================================================================
-# SIMPLE HEALTH MONITOR (Replaces complex 5-factor system)
+# SIMPLE HEALTH MONITOR (Same as before)
 # ============================================================================
 
 class SimpleHealthMonitor:
@@ -82,7 +82,204 @@ class SimpleHealthMonitor:
         }
 
 # ============================================================================
-# STREAMLIT APP CONFIGURATION
+# AI ASSISTANT FUNCTIONS (NEW)
+# ============================================================================
+
+def display_ai_assistant(context, portfolio_value):
+    """Barebones AI assistant for portfolio questions"""
+    
+    st.markdown("---")
+    st.markdown("### 🤖 AI Portfolio Assistant")
+    st.markdown("*Ask questions about your analysis - get personalized explanations*")
+    
+    # Initialize chat history in session state
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    
+    # Suggested questions (reduces complexity)
+    st.markdown("**📋 Quick Questions:**")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("💡 Why is my portfolio risky?", key="why_risky", use_container_width=True):
+            handle_quick_question("Why is my portfolio risky?", context, portfolio_value)
+        if st.button("🛡️ How can I reduce risk?", key="reduce_risk", use_container_width=True):
+            handle_quick_question("How can I reduce risk?", context, portfolio_value)
+    
+    with col2:
+        if st.button("📊 Explain my health score", key="explain_health", use_container_width=True):
+            handle_quick_question("Explain my health score", context, portfolio_value)
+        if st.button("💥 What if markets crash?", key="crash_scenario", use_container_width=True):
+            handle_quick_question("What if markets crash?", context, portfolio_value)
+    
+    # Custom question input (advanced users)
+    with st.expander("💬 Ask a Custom Question", expanded=False):
+        st.markdown("*Examples: 'What happens if I add 20% bonds?' or 'Should I sell some AAPL?'*")
+        
+        user_question = st.text_input(
+            "Your question:",
+            placeholder="Ask anything about your portfolio...",
+            key="custom_question"
+        )
+        
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("Ask AI", key="ask_custom", type="primary") and user_question:
+                handle_custom_question(user_question, context, portfolio_value)
+        with col2:
+            if st.button("Clear Chat", key="clear_chat"):
+                st.session_state.chat_history = []
+                st.rerun()
+    
+    # Display chat history
+    if st.session_state.chat_history:
+        st.markdown("**💬 Conversation History:**")
+        
+        # Create a container for chat messages
+        chat_container = st.container()
+        
+        with chat_container:
+            # Show last 5 exchanges to avoid overwhelming UI
+            recent_chats = st.session_state.chat_history[-5:]
+            
+            for i, (question, answer) in enumerate(recent_chats):
+                # User question
+                st.markdown(f"""
+                <div style="background-color: #f0f2f6; padding: 10px; border-radius: 10px; margin: 5px 0;">
+                    <strong>🙋 You:</strong> {question}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # AI response
+                st.markdown(f"""
+                <div style="background-color: #e8f4fd; padding: 10px; border-radius: 10px; margin: 5px 0 15px 0;">
+                    <strong>🤖 AI:</strong> {answer}
+                </div>
+                """, unsafe_allow_html=True)
+        
+        if len(st.session_state.chat_history) > 5:
+            st.info(f"Showing last 5 conversations. Total: {len(st.session_state.chat_history)}")
+
+def handle_quick_question(question, context, portfolio_value):
+    """Handle pre-defined quick questions"""
+    
+    with st.spinner("🤖 AI is analyzing your question..."):
+        try:
+            # Use your existing agent with the context that already has analysis
+            agent = RealDataPortfolioAgent(force_real_data=True)
+            agent.user_contexts["streamlit_user"] = context  # Reuse existing context
+            
+            # Generate contextual response
+            response = agent.process_message("streamlit_user", question)
+            
+            # Clean up response for chat display
+            clean_response = clean_ai_response(response, question)
+            
+            # Add to chat history
+            st.session_state.chat_history.append((question, clean_response))
+            
+            # Force refresh to show new message
+            st.rerun()
+            
+        except Exception as e:
+            error_message = f"I'm having trouble accessing that information right now. Error: {str(e)[:100]}..."
+            st.session_state.chat_history.append((question, error_message))
+            st.rerun()
+
+def handle_custom_question(question, context, portfolio_value):
+    """Handle custom user questions"""
+    
+    # Basic input validation
+    if len(question.strip()) < 5:
+        st.warning("Please ask a more specific question (at least 5 characters)")
+        return
+    
+    # Check for inappropriate questions
+    inappropriate_keywords = ['buy', 'sell', 'invest in', 'financial advice', 'stock pick']
+    if any(keyword in question.lower() for keyword in inappropriate_keywords):
+        disclaimer_response = "I can't provide specific investment advice, but I can help you understand your portfolio's risk characteristics and general concepts. Try asking about risk levels, diversification, or 'what if' scenarios instead."
+        st.session_state.chat_history.append((question, disclaimer_response))
+        st.rerun()
+        return
+    
+    # Use existing agent
+    with st.spinner("🤖 AI is thinking about your question..."):
+        try:
+            agent = RealDataPortfolioAgent(force_real_data=True)
+            agent.user_contexts["streamlit_user"] = context
+            
+            response = agent.process_message("streamlit_user", question)
+            clean_response = clean_ai_response(response, question)
+            
+            st.session_state.chat_history.append((question, clean_response))
+            st.rerun()
+            
+        except Exception as e:
+            error_message = f"I'm having trouble with that question. Try asking about your portfolio's risk level, health score, or diversification instead."
+            st.session_state.chat_history.append((question, error_message))
+            st.rerun()
+
+def clean_ai_response(response, question):
+    """Clean AI response for chat display"""
+    
+    # Remove excessive markdown formatting
+    clean = response.replace('**', '').replace('*', '')
+    
+    # Remove section headers that don't make sense in chat
+    lines = clean.split('\n')
+    filtered_lines = []
+    
+    for line in lines:
+        # Skip empty lines and headers that are too formal
+        if line.strip() and not line.startswith('###') and not line.startswith('##'):
+            # Remove bullet points for cleaner chat
+            line = line.replace('•', '').replace('-', '').strip()
+            if line:
+                filtered_lines.append(line)
+    
+    clean = ' '.join(filtered_lines)
+    
+    # Truncate very long responses for chat
+    if len(clean) > 400:
+        # Find a good breaking point
+        truncate_point = clean.rfind('.', 0, 400)
+        if truncate_point > 200:
+            clean = clean[:truncate_point + 1]
+        else:
+            clean = clean[:400] + "..."
+    
+    # Handle specific question types with tailored responses
+    if "risky" in question.lower():
+        if "high" in clean.lower():
+            return f"Your portfolio shows elevated risk levels. {clean[:200]}... This means you could see larger swings in value, especially during market downturns."
+        else:
+            return f"Your portfolio appears to have manageable risk levels. {clean[:200]}..."
+    
+    elif "health" in question.lower():
+        return f"Looking at your portfolio health: {clean[:300]}..."
+    
+    elif "crash" in question.lower():
+        return f"In a market crash scenario: {clean[:300]}... This gives you an idea of potential downside protection."
+    
+    elif "reduce risk" in question.lower():
+        return f"To reduce portfolio risk: {clean[:300]}... These changes could help lower your overall volatility."
+    
+    # Remove any remaining technical jargon for MVP
+    technical_terms = {
+        'multifractal': 'advanced',
+        'correlation matrix': 'correlation analysis',
+        'kurtosis': 'risk measurement',
+        'Value-at-Risk': 'VaR',
+        'Expected Shortfall': 'worst-case loss'
+    }
+    
+    for technical, simple in technical_terms.items():
+        clean = clean.replace(technical, simple)
+    
+    return clean
+
+# ============================================================================
+# STREAMLIT APP CONFIGURATION (Same as before)
 # ============================================================================
 
 st.set_page_config(
@@ -92,7 +289,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Simple CSS styling
+# Simple CSS styling (enhanced for AI chat)
 st.markdown("""
 <style>
     .main-header {
@@ -109,21 +306,32 @@ st.markdown("""
         border-radius: 8px;
         border-left: 4px solid #667eea;
     }
+    .chat-message {
+        padding: 10px;
+        border-radius: 10px;
+        margin: 5px 0;
+    }
+    .user-message {
+        background-color: #f0f2f6;
+    }
+    .ai-message {
+        background-color: #e8f4fd;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# MAIN APP FUNCTIONS
+# MAIN APP FUNCTIONS (Enhanced with AI)
 # ============================================================================
 
 def main():
-    """Main application function - simplified"""
+    """Main application function - with AI integration"""
     
     # Simple header
     st.markdown("""
     <div class="main-header">
         <h1>📊 Portfolio Risk Analyzer</h1>
-        <p>Professional portfolio analysis with real market data</p>
+        <p>Professional portfolio analysis with AI-powered insights</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -139,31 +347,43 @@ def main():
         
         if st.button("Conservative Mix", use_container_width=True):
             st.session_state.portfolio_input = "50% SPY, 30% BND, 20% VTI"
+            st.session_state.chat_history = []  # Clear chat when changing portfolio
             st.rerun()
             
         if st.button("Tech Growth", use_container_width=True):
             st.session_state.portfolio_input = "40% AAPL, 30% MSFT, 20% GOOGL, 10% AMZN"
+            st.session_state.chat_history = []
             st.rerun()
             
         if st.button("Balanced ETF", use_container_width=True):
             st.session_state.portfolio_input = "Equal weight SPY QQQ BND"
+            st.session_state.chat_history = []
             st.rerun()
             
         if st.button("Crypto + Stocks", use_container_width=True):
             st.session_state.portfolio_input = "40% SPY, 30% QQQ, 20% BTC-USD, 10% ETH-USD"
+            st.session_state.chat_history = []
             st.rerun()
         
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.info("""
-        **Real Market Data Analysis**
+        **AI-Powered Portfolio Analysis**
         
-        ✅ Live market data from Yahoo Finance
-        ✅ Professional risk metrics (VaR, volatility)
-        ✅ Portfolio health scoring
-        ✅ Stress testing scenarios
-        ✅ Crypto support (use -USD suffix)
+        ✅ Live market data analysis
+        ✅ Professional risk metrics
+        ✅ AI assistant for explanations
+        ✅ Personalized recommendations
+        ✅ Crypto support (-USD suffix)
+        
+        **NEW: Ask the AI questions about your results!**
         """)
+        
+        # AI Status indicator
+        if ENGINE_AVAILABLE:
+            st.success("🤖 AI Assistant: Online")
+        else:
+            st.error("🤖 AI Assistant: Offline")
     
     # Main content area
     col1, col2 = st.columns([1, 1])
@@ -179,6 +399,11 @@ def main():
             placeholder="Enter your portfolio:\n\n• 40% AAPL, 30% MSFT, 20% GOOGL, 10% BND\n• Equal weight SPY QQQ VTI\n• 50% VOO, 50% BND\n• 60% BTC-USD, 40% ETH-USD (crypto)",
             help="Use percentage format or 'Equal weight' followed by ticker symbols"
         )
+        
+        # Clear chat if portfolio changes
+        if portfolio_input != st.session_state.get('last_portfolio_input', ''):
+            st.session_state.chat_history = []
+            st.session_state.last_portfolio_input = portfolio_input
         
         # Portfolio value input
         portfolio_value = st.number_input(
@@ -221,12 +446,13 @@ def main():
             - **Health Score**: Overall portfolio assessment
             - **Stress Testing**: Crisis scenario analysis
             - **Visual Breakdown**: Portfolio allocation chart
+            - **🤖 AI Assistant**: Ask questions about your results
             
             **Analysis completed in ~30 seconds using real market data**
             """)
 
 def run_portfolio_analysis(portfolio_input, portfolio_value):
-    """Run simplified portfolio analysis"""
+    """Run simplified portfolio analysis with AI integration"""
     
     with st.spinner("🔄 Analyzing your portfolio with real market data..."):
         try:
@@ -276,7 +502,7 @@ def run_portfolio_analysis(portfolio_input, portfolio_value):
                 """)
 
 def display_analysis_results(context, portfolio_value):
-    """Display simplified analysis results"""
+    """Display simplified analysis results WITH AI assistant"""
     
     analysis_data = context.last_analysis
     portfolio = context.portfolio
@@ -460,8 +686,11 @@ def display_analysis_results(context, portfolio_value):
             
             st.write(f"• **{scenario_name.replace('_', ' ').title()}**: {loss_pct:.1%} loss (${loss_dollar:,.0f})")
     
+    # AI ASSISTANT SECTION (NEW!)
+    display_ai_assistant(context, portfolio_value)
+    
     # Simple action items
-    st.markdown("### 🎯 Next Steps")
+    st.markdown("### 🎯 Summary")
     
     if health['health_score'] < 60:
         st.warning("**Consider**: Reducing concentration and improving diversification")
@@ -469,6 +698,8 @@ def display_analysis_results(context, portfolio_value):
         st.info("**Consider**: Fine-tuning allocation for better risk management")
     else:
         st.success("**Status**: Portfolio shows good risk management practices")
+    
+    st.markdown("**💡 Tip**: Use the AI assistant above to ask specific questions about your analysis!")
 
 # ============================================================================
 # RUN THE APP
