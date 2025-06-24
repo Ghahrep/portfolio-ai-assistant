@@ -85,16 +85,68 @@ class SimpleHealthMonitor:
 # AI ASSISTANT FUNCTIONS (NEW)
 # ============================================================================
 
+
+def handle_quick_question(question, context, portfolio_value):
+    """Handle pre-defined quick questions - FIXED VERSION"""
+    
+    with st.spinner("🤖 AI is analyzing your question..."):
+        try:
+            # Use your existing agent with the context that already has analysis
+            agent = RealDataPortfolioAgent(force_real_data=True)
+            agent.user_contexts["streamlit_user"] = context  # Reuse existing context
+            
+            # Generate contextual response
+            response = agent.process_message("streamlit_user", question)
+            
+            # Clean up response for chat display
+            clean_response = clean_ai_response(response, question)
+            
+            # Add to chat history
+            st.session_state.chat_history.append((question, clean_response))
+            
+            # DON'T CALL st.rerun() - just let Streamlit naturally update
+            
+        except Exception as e:
+            error_message = f"I'm having trouble accessing that information right now. Error: {str(e)[:100]}..."
+            st.session_state.chat_history.append((question, error_message))
+
+def handle_custom_question(question, context, portfolio_value):
+    """Handle custom user questions - FIXED VERSION"""
+    
+    # Basic input validation
+    if len(question.strip()) < 5:
+        st.warning("Please ask a more specific question (at least 5 characters)")
+        return
+    
+    # Check for inappropriate questions
+    inappropriate_keywords = ['buy', 'sell', 'invest in', 'financial advice', 'stock pick']
+    if any(keyword in question.lower() for keyword in inappropriate_keywords):
+        disclaimer_response = "I can't provide specific investment advice, but I can help you understand your portfolio's risk characteristics and general concepts. Try asking about risk levels, diversification, or 'what if' scenarios instead."
+        st.session_state.chat_history.append((question, disclaimer_response))
+        return
+    
+    # Use existing agent
+    with st.spinner("🤖 AI is thinking about your question..."):
+        try:
+            agent = RealDataPortfolioAgent(force_real_data=True)
+            agent.user_contexts["streamlit_user"] = context
+            
+            response = agent.process_message("streamlit_user", question)
+            clean_response = clean_ai_response(response, question)
+            
+            st.session_state.chat_history.append((question, clean_response))
+            
+            # DON'T CALL st.rerun() - just let Streamlit naturally update
+            
+        except Exception as e:
+            error_message = f"I'm having trouble with that question. Try asking about your portfolio's risk level, health score, or diversification instead."
+            st.session_state.chat_history.append((question, error_message))
 def display_ai_assistant(context, portfolio_value):
-    """Barebones AI assistant for portfolio questions"""
+    """Barebones AI assistant for portfolio questions - FIXED VERSION"""
     
     st.markdown("---")
     st.markdown("### 🤖 AI Portfolio Assistant")
     st.markdown("*Ask questions about your analysis - get personalized explanations*")
-    
-    # Initialize chat history in session state
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
     
     # Suggested questions (reduces complexity)
     st.markdown("**📋 Quick Questions:**")
@@ -126,10 +178,11 @@ def display_ai_assistant(context, portfolio_value):
         with col1:
             if st.button("Ask AI", key="ask_custom", type="primary") and user_question:
                 handle_custom_question(user_question, context, portfolio_value)
+                # Clear the input after asking
+                st.session_state["custom_question"] = ""
         with col2:
             if st.button("Clear Chat", key="clear_chat"):
                 st.session_state.chat_history = []
-                st.rerun()
     
     # Display chat history
     if st.session_state.chat_history:
@@ -159,66 +212,6 @@ def display_ai_assistant(context, portfolio_value):
         
         if len(st.session_state.chat_history) > 5:
             st.info(f"Showing last 5 conversations. Total: {len(st.session_state.chat_history)}")
-
-def handle_quick_question(question, context, portfolio_value):
-    """Handle pre-defined quick questions"""
-    
-    with st.spinner("🤖 AI is analyzing your question..."):
-        try:
-            # Use your existing agent with the context that already has analysis
-            agent = RealDataPortfolioAgent(force_real_data=True)
-            agent.user_contexts["streamlit_user"] = context  # Reuse existing context
-            
-            # Generate contextual response
-            response = agent.process_message("streamlit_user", question)
-            
-            # Clean up response for chat display
-            clean_response = clean_ai_response(response, question)
-            
-            # Add to chat history
-            st.session_state.chat_history.append((question, clean_response))
-            
-            # Force refresh to show new message
-            st.rerun()
-            
-        except Exception as e:
-            error_message = f"I'm having trouble accessing that information right now. Error: {str(e)[:100]}..."
-            st.session_state.chat_history.append((question, error_message))
-            st.rerun()
-
-def handle_custom_question(question, context, portfolio_value):
-    """Handle custom user questions"""
-    
-    # Basic input validation
-    if len(question.strip()) < 5:
-        st.warning("Please ask a more specific question (at least 5 characters)")
-        return
-    
-    # Check for inappropriate questions
-    inappropriate_keywords = ['buy', 'sell', 'invest in', 'financial advice', 'stock pick']
-    if any(keyword in question.lower() for keyword in inappropriate_keywords):
-        disclaimer_response = "I can't provide specific investment advice, but I can help you understand your portfolio's risk characteristics and general concepts. Try asking about risk levels, diversification, or 'what if' scenarios instead."
-        st.session_state.chat_history.append((question, disclaimer_response))
-        st.rerun()
-        return
-    
-    # Use existing agent
-    with st.spinner("🤖 AI is thinking about your question..."):
-        try:
-            agent = RealDataPortfolioAgent(force_real_data=True)
-            agent.user_contexts["streamlit_user"] = context
-            
-            response = agent.process_message("streamlit_user", question)
-            clean_response = clean_ai_response(response, question)
-            
-            st.session_state.chat_history.append((question, clean_response))
-            st.rerun()
-            
-        except Exception as e:
-            error_message = f"I'm having trouble with that question. Try asking about your portfolio's risk level, health score, or diversification instead."
-            st.session_state.chat_history.append((question, error_message))
-            st.rerun()
-
 def clean_ai_response(response, question):
     """Clean AI response for chat display"""
     
@@ -324,8 +317,71 @@ st.markdown("""
 # MAIN APP FUNCTIONS (Enhanced with AI)
 # ============================================================================
 
+# Replace these functions in your app.py
+
+def run_portfolio_analysis(portfolio_input, portfolio_value):
+    """Run simplified portfolio analysis with AI integration - FIXED VERSION"""
+    
+    with st.spinner("🔄 Analyzing your portfolio with real market data..."):
+        try:
+            # Initialize the analysis engine
+            agent = RealDataPortfolioAgent(force_real_data=True)
+            
+            # Run analysis
+            start_time = time.time()
+            response = agent.process_message("streamlit_user", portfolio_input)
+            analysis_time = time.time() - start_time
+            
+            # Get the context from the agent
+            context = agent.user_contexts.get("streamlit_user")
+            
+            # STORE ANALYSIS RESULTS IN SESSION STATE
+            if context and context.last_analysis:
+                st.session_state['analysis_context'] = context
+                st.session_state['portfolio_value'] = portfolio_value
+                st.session_state['analysis_response'] = response
+                st.session_state['analysis_time'] = analysis_time
+                st.session_state['has_analysis'] = True
+            
+            # Display success message
+            st.success(f"✅ Analysis completed in {analysis_time:.1f} seconds")
+            
+            # Display results
+            if context and context.last_analysis:
+                display_analysis_results(context, portfolio_value)
+            else:
+                # Fallback to text response
+                st.markdown("### 📋 Analysis Summary")
+                st.markdown(response)
+            
+        except Exception as e:
+            st.error(f"❌ Analysis failed: {str(e)}")
+            
+            # Clear session state on error
+            st.session_state['has_analysis'] = False
+            
+            # Provide helpful error guidance
+            if "Invalid tickers" in str(e):
+                st.info("""
+                **💡 Ticker Validation Failed**
+                
+                Try these verified examples:
+                - `50% AAPL, 50% MSFT` (major stocks)
+                - `Equal weight SPY QQQ BND` (popular ETFs)
+                - `40% VOO, 60% BND` (Vanguard funds)
+                """)
+            elif "REAL DATA" in str(e):
+                st.info("""
+                **💡 Market Data Issue**
+                
+                This usually means:
+                - Market is closed and recent data unavailable
+                - Network connectivity issues
+                - Try again in a few moments
+                """)
+
 def main():
-    """Main application function - with AI integration"""
+    """Main application function - FIXED VERSION with session state"""
     
     # Simple header
     st.markdown("""
@@ -340,6 +396,12 @@ def main():
         st.error("❌ Portfolio analysis engine not available.")
         st.stop()
     
+    # Initialize session state
+    if 'has_analysis' not in st.session_state:
+        st.session_state['has_analysis'] = False
+    if 'chat_history' not in st.session_state:
+        st.session_state['chat_history'] = []
+    
     # Simple sidebar with examples
     with st.sidebar:
         st.header("🚀 Quick Examples")
@@ -348,21 +410,25 @@ def main():
         if st.button("Conservative Mix", use_container_width=True):
             st.session_state.portfolio_input = "50% SPY, 30% BND, 20% VTI"
             st.session_state.chat_history = []  # Clear chat when changing portfolio
+            st.session_state['has_analysis'] = False  # Clear previous analysis
             st.rerun()
             
         if st.button("Tech Growth", use_container_width=True):
             st.session_state.portfolio_input = "40% AAPL, 30% MSFT, 20% GOOGL, 10% AMZN"
             st.session_state.chat_history = []
+            st.session_state['has_analysis'] = False
             st.rerun()
             
         if st.button("Balanced ETF", use_container_width=True):
             st.session_state.portfolio_input = "Equal weight SPY QQQ BND"
             st.session_state.chat_history = []
+            st.session_state['has_analysis'] = False
             st.rerun()
             
         if st.button("Crypto + Stocks", use_container_width=True):
             st.session_state.portfolio_input = "40% SPY, 30% QQQ, 20% BTC-USD, 10% ETH-USD"
             st.session_state.chat_history = []
+            st.session_state['has_analysis'] = False
             st.rerun()
         
         st.markdown("---")
@@ -400,9 +466,10 @@ def main():
             help="Use percentage format or 'Equal weight' followed by ticker symbols"
         )
         
-        # Clear chat if portfolio changes
+        # Clear analysis if portfolio changes
         if portfolio_input != st.session_state.get('last_portfolio_input', ''):
             st.session_state.chat_history = []
+            st.session_state['has_analysis'] = False
             st.session_state.last_portfolio_input = portfolio_input
         
         # Portfolio value input
@@ -435,8 +502,15 @@ def main():
     with col2:
         st.header("📊 Analysis Results")
         
+        # Check if we should run new analysis or show existing results
         if analyze_button and portfolio_input:
             run_portfolio_analysis(portfolio_input, portfolio_value)
+        elif st.session_state.get('has_analysis', False):
+            # Show existing analysis results from session state
+            context = st.session_state['analysis_context']
+            portfolio_value = st.session_state['portfolio_value']
+            st.success(f"✅ Analysis completed in {st.session_state['analysis_time']:.1f} seconds")
+            display_analysis_results(context, portfolio_value)
         else:
             st.info("""
             👈 **Enter your portfolio to get started**
@@ -449,10 +523,10 @@ def main():
             - **🤖 AI Assistant**: Ask questions about your results
             
             **Analysis completed in ~30 seconds using real market data**
-            """)
+           
 
 def run_portfolio_analysis(portfolio_input, portfolio_value):
-    """Run simplified portfolio analysis with AI integration"""
+    """Run simplified portfolio analysis with AI integration - FIXED VERSION"""
     
     with st.spinner("🔄 Analyzing your portfolio with real market data..."):
         try:
@@ -467,6 +541,14 @@ def run_portfolio_analysis(portfolio_input, portfolio_value):
             # Get the context from the agent
             context = agent.user_contexts.get("streamlit_user")
             
+            # STORE ANALYSIS RESULTS IN SESSION STATE
+            if context and context.last_analysis:
+                st.session_state['analysis_context'] = context
+                st.session_state['portfolio_value'] = portfolio_value
+                st.session_state['analysis_response'] = response
+                st.session_state['analysis_time'] = analysis_time
+                st.session_state['has_analysis'] = True
+            
             # Display success message
             st.success(f"✅ Analysis completed in {analysis_time:.1f} seconds")
             
@@ -480,6 +562,9 @@ def run_portfolio_analysis(portfolio_input, portfolio_value):
             
         except Exception as e:
             st.error(f"❌ Analysis failed: {str(e)}")
+            
+            # Clear session state on error
+            st.session_state['has_analysis'] = False
             
             # Provide helpful error guidance
             if "Invalid tickers" in str(e):
