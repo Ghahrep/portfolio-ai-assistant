@@ -1,0 +1,21 @@
+# Core Streamlit requirements
+streamlit>=1.28.0
+pandas>=1.5.0
+numpy>=1.24.0
+
+# Data visualization
+plotly>=5.15.0
+
+# Financial data and analysis
+yfinance>=0.2.18
+scipy>=1.10.0
+
+# Optional: Advanced features
+matplotlib>=3.6.0
+seaborn>=0.12.0
+
+# PDF generation (for future feature)
+reportlab>=4.0.0
+
+# Caching and performance
+requests>=2.28.0
