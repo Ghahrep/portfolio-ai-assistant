@@ -89,30 +89,37 @@ def add_feedback_section():
         st.success("Feature request recorded! This helps us prioritize development. 🚀")
 
 def display_analytics_summary():
-    """Display analytics summary for debugging (remove in production)"""
-    if st.sidebar.checkbox("🔍 Show Analytics (Debug)", value=False):
-        with st.sidebar.expander("Analytics Data"):
-            analytics = st.session_state.get('usage_analytics', [])
-            st.write(f"**Session ID**: {st.session_state.get('session_id', 'None')}")
-            st.write(f"**Events Tracked**: {len(analytics)}")
-            
-            if analytics:
-                event_types = {}
-                for event in analytics:
-                    event_type = event['event_type']
-                    event_types[event_type] = event_types.get(event_type, 0) + 1
+    """Display analytics summary for admin only"""
+    
+    # Admin password protection
+    admin_password = st.sidebar.text_input("Admin Access", type="password", key="admin_pw")
+    
+    if admin_password == "Gertie78*":  # Change this password!
+        if st.sidebar.checkbox("🔍 Show Analytics (Admin)", value=False):
+            with st.sidebar.expander("Analytics Data"):
+                analytics = st.session_state.get('usage_analytics', [])
+                st.write(f"**Session ID**: {st.session_state.get('session_id', 'None')}")
+                st.write(f"**Events Tracked**: {len(analytics)}")
                 
-                st.write("**Event Summary**:")
-                for event_type, count in event_types.items():
-                    st.write(f"• {event_type}: {count}")
-                
-                # Add download button for analytics
-                if st.button("📥 Download Analytics Report", key="download_analytics"):
-                    create_analytics_download(analytics)
-                
-                # Add manual copy option as backup
-                if st.button("📋 Copy Analytics Report", key="copy_analytics"):
-                    display_analytics_text(analytics)
+                if analytics:
+                    event_types = {}
+                    for event in analytics:
+                        event_type = event['event_type']
+                        event_types[event_type] = event_types.get(event_type, 0) + 1
+                    
+                    st.write("**Event Summary**:")
+                    for event_type, count in event_types.items():
+                        st.write(f"• {event_type}: {count}")
+                    
+                    # Add download button for analytics
+                    if st.button("📥 Download Analytics Report", key="download_analytics"):
+                        create_analytics_download(analytics)
+                    
+                    # Add manual copy option as backup
+                    if st.button("📋 Copy Analytics Report", key="copy_analytics"):
+                        display_analytics_text(analytics)
+    elif admin_password:
+        st.sidebar.error("❌ Invalid admin password")
 
 # ============================================================================
 # ORIGINAL APP CODE WITH TRACKING INTEGRATED
@@ -958,6 +965,7 @@ Total Portfolio Value: ${portfolio_value:,}
     
     base_case = analysis_data.get('base_case', {})
     var_95 = base_case.get('var_95', 0)
+    
     es_95 = base_case.get('es_95', 0)
     
     report_text += f"""
