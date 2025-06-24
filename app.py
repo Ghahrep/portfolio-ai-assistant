@@ -86,9 +86,7 @@ def add_feedback_section():
     if st.button("📝 Submit Feature Request", key="submit_feature") and feature_request.strip():
         track_usage('feature_request', {'request': feature_request.strip()})
         st.success("Feature request recorded! This helps us prioritize development. 🚀")
-        # Clear the text area
-        st.session_state.feature_request_input = ""
-        st.rerun()
+        
 
 def display_analytics_summary():
     """Display analytics summary for debugging (remove in production)"""
