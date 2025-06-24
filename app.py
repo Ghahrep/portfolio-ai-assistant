@@ -777,7 +777,7 @@ def display_detailed_analysis(context, portfolio_value, response):
     st.markdown(f"### {risk_color[risk_level]} Risk Level: {risk_level}")
     
     # Portfolio Health Score
-    display_enhanced_health_analysis(portfolio)
+    display_enhanced_health_analysis(portfolio,analysis_data)
     
     # Stress Testing Results
     display_stress_tests(analysis_data, portfolio_value)
