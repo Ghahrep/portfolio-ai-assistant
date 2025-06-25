@@ -92,54 +92,30 @@ class PortfolioHealthMonitor:
     """Simplified portfolio health assessment"""
     
     def calculate_health(self, portfolio: Dict[str, float], returns_data: pd.DataFrame) -> HealthMetrics:
-        """Calculate comprehensive portfolio health score with debug logging"""
+        """Calculate comprehensive portfolio health score with all 5 components"""
         
-        print(f"🔍 DEBUG: Starting health calculation for portfolio: {portfolio}")
-        
-        # Concentration risk (0-100, higher is better) - KEEP EXISTING
+        # Concentration risk (0-100, higher is better)
         max_weight = max(portfolio.values()) if portfolio else 1.0
-        concentration_penalty = max_weight * 100  # Direct penalty
+        concentration_penalty = max_weight * 100
         concentration_score = max(0, 100 - concentration_penalty)
-        print(f"✅ Concentration score: {concentration_score}")
         
-        # Diversification score - KEEP EXISTING  
+        # Diversification score
         n_positions = len(portfolio)
-        diversification_score = min(100, n_positions * 15)  # Benefit for more positions
-        print(f"✅ Diversification score: {diversification_score}")
+        diversification_score = min(100, n_positions * 15)
         
-        # Enhanced correlation assessment with debug
-        try:
-            correlation_score = self.assess_correlation_health(portfolio, returns_data)
-            print(f"✅ Correlation score: {correlation_score}")
-        except Exception as e:
-            print(f"❌ Correlation assessment failed: {e}")
-            correlation_score = 70  # Fallback
+        # Enhanced assessments
+        correlation_score = self.assess_correlation_health(portfolio, returns_data)
+        regime_fitness_score = self.assess_regime_fitness(portfolio)
+        factor_balance_score = self.assess_factor_balance(portfolio)
         
-        # Regime fitness assessment with debug
-        try:
-            regime_fitness_score = self.assess_regime_fitness(portfolio)
-            print(f"✅ Regime fitness score: {regime_fitness_score}")
-        except Exception as e:
-            print(f"❌ Regime fitness assessment failed: {e}")
-            regime_fitness_score = 70  # Fallback
-        
-        # Factor balance assessment with debug
-        try:
-            factor_balance_score = self.assess_factor_balance(portfolio)
-            print(f"✅ Factor balance score: {factor_balance_score}")
-        except Exception as e:
-            print(f"❌ Factor balance assessment failed: {e}")
-            factor_balance_score = 70  # Fallback
-        
-        # Overall score calculation
+        # Overall score with all 5 components
         overall_score = (
-            concentration_score * 0.25 +     
-            diversification_score * 0.20 +   
-            correlation_score * 0.20 +       
-            regime_fitness_score * 0.20 +    
-            factor_balance_score * 0.15      
+            concentration_score * 0.25 +
+            diversification_score * 0.20 +
+            correlation_score * 0.20 +
+            regime_fitness_score * 0.20 +
+            factor_balance_score * 0.15
         )
-        print(f"🎯 Overall health score: {overall_score}")
         
         # Health level
         if overall_score >= 80:
@@ -151,20 +127,14 @@ class PortfolioHealthMonitor:
         else:
             health_level = "Poor"
         
-        # Risk and recommendation assessment with debug
-        try:
-            key_risks = self._identify_risks_comprehensive(portfolio, max_weight, n_positions, 
-                                                         correlation_score, regime_fitness_score,
-                                                         factor_balance_score)
-            recommendations = self._generate_recommendations_comprehensive(overall_score, max_weight, 
-                                                                         n_positions, correlation_score, 
-                                                                         regime_fitness_score,
-                                                                         factor_balance_score)
-            print(f"✅ Risks and recommendations generated successfully")
-        except Exception as e:
-            print(f"❌ Risk/recommendation generation failed: {e}")
-            key_risks = ["Risk assessment temporarily unavailable"]
-            recommendations = ["Please try analyzing again"]
+        # Generate risks and recommendations
+        key_risks = self._identify_risks_comprehensive(portfolio, max_weight, n_positions, 
+                                                     correlation_score, regime_fitness_score,
+                                                     factor_balance_score)
+        recommendations = self._generate_recommendations_comprehensive(overall_score, max_weight, 
+                                                                     n_positions, correlation_score, 
+                                                                     regime_fitness_score,
+                                                                     factor_balance_score)
         
         return HealthMetrics(
             overall_score=overall_score,
@@ -866,7 +836,7 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     col1, col2, col3, col4= st.columns([2, 1, 1,1])
     
     with col1:
-        # Enhanced health gauge
+        # Enhanced health gauge - KEEP THIS AS IS
         health_score = health_metrics.overall_score if hasattr(health_metrics, 'overall_score') else 65
         
         fig_gauge = go.Figure(go.Indicator(
@@ -894,52 +864,46 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         st.plotly_chart(fig_gauge, use_container_width=True)
     
     with col2:
-        # Enhanced health component scores with safe attribute access
+        # Fixed health component scores - USE REAL VALUES
         st.metric("Concentration Risk", 
-                 f"{getattr(health_metrics, 'concentration_risk', 30):.0f}/100",
+                 f"{health_metrics.concentration_risk:.0f}/100",
                  delta="Lower is better")
         
         st.metric("Diversification", 
-                 f"{getattr(health_metrics, 'diversification_score', 75):.0f}/100",
+                 f"{health_metrics.diversification_score:.0f}/100",
                  delta="Higher is better")
         
-        # Show correlation if available (safe access)
-        if hasattr(health_metrics, 'correlation_score'):
-            st.metric("Correlation Health", 
-                     f"{health_metrics.correlation_score:.0f}/100",
-                     delta="50-80 optimal")
+        # Show correlation with real value
+        st.metric("Correlation Health", 
+                 f"{health_metrics.correlation_score:.0f}/100",
+                 delta="50-80 optimal")
     
     with col3:
-        # Portfolio stats with safe attribute access
+        # Portfolio stats with real values
         max_position = max(portfolio.values()) * 100 if portfolio else 0
         st.metric("Largest Position", f"{max_position:.1f}%")
         st.metric("Number of Holdings", len(portfolio))
-
-        # Safe access to new metrics
-        if hasattr(health_metrics, 'regime_fitness_score'):
-            st.metric("Regime Fitness", 
-                     f"{health_metrics.regime_fitness_score:.0f}/100",
-                     delta="Higher is better")
         
-        # Risk level indicator with safe health score access
-        health_score = getattr(health_metrics, 'overall_score', 65)
+        # Show regime fitness with real value
+        st.metric("Regime Fitness", 
+                 f"{health_metrics.regime_fitness_score:.0f}/100",
+                 delta="Higher is better")
+    
+    with col4:
+        # Show factor balance with real value - FIXED!
+        st.metric("Factor Balance", 
+                 f"{health_metrics.factor_balance_score:.0f}/100",
+                 delta="Higher is better")
+        
+        # Risk level indicator with real health score
         if health_score >= 80:
             st.success("🟢 Low Risk")
-        elif health_score >= 65:
-            st.info("🟡 Moderate Risk")
+        elif health_score >= 75:
+            st.info("🟡 Moderate Risk")  
         elif health_score >= 50:
             st.warning("🟠 Elevated Risk")
         else:
             st.error("🔴 High Risk")
-
-    with col4:
-        # Additional advanced metrics with safe access
-        if hasattr(health_metrics, 'factor_balance_score'):
-            st.metric("Factor Balance", 
-                     f"{health_metrics.factor_balance_score:.0f}/100",
-                     delta="Higher is better")
-        else:
-            st.info("Factor Balance: Calculating...")
     
     # Enhanced expandable sections
     with st.expander("🚨 Risk Analysis & Recommendations", expanded=bool(health_score < 65)):
@@ -968,11 +932,11 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         # Create a simple breakdown chart
         components = ['Concentration\n(Inverted)', 'Diversification', 'Correlation', 'Regime Fitness', 'Factor Balance']
         scores = [
-            100 - getattr(health_metrics, 'concentration_risk', 30),  # Safe access
-            getattr(health_metrics, 'diversification_score', 75),     # Safe access
-            getattr(health_metrics, 'correlation_score', 70),         # Safe access
-            getattr(health_metrics, 'regime_fitness_score', 70),      # Safe access
-            getattr(health_metrics, 'factor_balance_score', 70)       # Safe access
+            100 - health_metrics.concentration_risk,    # Real value: ~70
+            health_metrics.diversification_score,       # Real value: 75
+            health_metrics.correlation_score,           # Real value: ~83
+            health_metrics.regime_fitness_score,        # Real value: 85
+            health_metrics.factor_balance_score         # Real value: 80
         ]
         
         fig_components = go.Figure(data=[
