@@ -84,6 +84,7 @@ class HealthMetrics:
     diversification_score: float
     correlation_score: float 
     regime_fitness_score: float
+    factor_balance_score: float
     key_risks: List[str]
     recommendations: List[str]
 
@@ -91,7 +92,7 @@ class PortfolioHealthMonitor:
     """Simplified portfolio health assessment"""
     
     def calculate_health(self, portfolio: Dict[str, float], returns_data: pd.DataFrame) -> HealthMetrics:
-        """Calculate enhanced portfolio health score with regime fitness"""
+        """Calculate comprehensive portfolio health score with all 5 components"""
         
         # Concentration risk (0-100, higher is better) - KEEP EXISTING
         max_weight = max(portfolio.values()) if portfolio else 1.0
@@ -105,15 +106,19 @@ class PortfolioHealthMonitor:
         # Enhanced correlation assessment - KEEP EXISTING
         correlation_score = self.assess_correlation_health(portfolio, returns_data)
         
-        # NEW: Regime fitness assessment
+        # Regime fitness assessment - KEEP EXISTING
         regime_fitness_score = self.assess_regime_fitness(portfolio)
         
-        # UPDATED: Overall score with regime fitness (4 components now)
+        # NEW: Factor balance assessment
+        factor_balance_score = self.assess_factor_balance(portfolio)
+        
+        # UPDATED: Overall score with all 5 components (balanced weighting)
         overall_score = (
-            concentration_score * 0.30 +     # Reduced from 0.4
-            diversification_score * 0.25 +   # Reduced from 0.3  
-            correlation_score * 0.25 +       # Reduced from 0.3
-            regime_fitness_score * 0.20      # NEW: 20% weight
+            concentration_score * 0.25 +     # Reduced slightly
+            diversification_score * 0.20 +   # Reduced slightly  
+            correlation_score * 0.20 +       # Reduced slightly
+            regime_fitness_score * 0.20 +    # Keep existing
+            factor_balance_score * 0.15      # NEW: 15% weight
         )
         
         # Health level - KEEP EXISTING
@@ -126,12 +131,14 @@ class PortfolioHealthMonitor:
         else:
             health_level = "Poor"
         
-        # Enhanced: Include regime fitness in risk assessment
-        key_risks = self._identify_risks_with_regime(portfolio, max_weight, n_positions, 
-                                                   correlation_score, regime_fitness_score)
-        recommendations = self._generate_recommendations_with_regime(overall_score, max_weight, 
-                                                                   n_positions, correlation_score, 
-                                                                   regime_fitness_score)
+        # Enhanced: Include factor balance in risk assessment
+        key_risks = self._identify_risks_comprehensive(portfolio, max_weight, n_positions, 
+                                                     correlation_score, regime_fitness_score,
+                                                     factor_balance_score)
+        recommendations = self._generate_recommendations_comprehensive(overall_score, max_weight, 
+                                                                     n_positions, correlation_score, 
+                                                                     regime_fitness_score,
+                                                                     factor_balance_score)
         
         return HealthMetrics(
             overall_score=overall_score,
@@ -139,15 +146,16 @@ class PortfolioHealthMonitor:
             concentration_risk=100 - concentration_score,
             diversification_score=diversification_score,
             correlation_score=correlation_score,
-            regime_fitness_score=regime_fitness_score,  # NEW: Add this
+            regime_fitness_score=regime_fitness_score,
+            factor_balance_score=factor_balance_score,  # NEW: Add this
             key_risks=key_risks,
             recommendations=recommendations
         )
     
-    def _identify_risks_with_regime(self, portfolio: Dict[str, float], max_weight: float, 
-                                  n_positions: int, correlation_score: float, 
-                                  regime_fitness_score: float) -> List[str]:
-        """Enhanced risk identification including regime fitness"""
+    def _identify_risks_comprehensive(self, portfolio: Dict[str, float], max_weight: float, 
+                                    n_positions: int, correlation_score: float, 
+                                    regime_fitness_score: float, factor_balance_score: float) -> List[str]:
+        """Comprehensive risk identification including factor balance"""
         risks = []
         
         # Existing concentration risks
@@ -168,11 +176,17 @@ class PortfolioHealthMonitor:
         elif correlation_score < 60:
             risks.append("Moderate correlation detected - consider uncorrelated assets")
         
-        # NEW: Regime fitness risks
+        # Regime fitness risks - KEEP EXISTING
         if regime_fitness_score < 50:
             risks.append("Portfolio structure may not be optimal for current market conditions")
         elif regime_fitness_score < 70:
             risks.append("Portfolio could benefit from better market regime alignment")
+        
+        # NEW: Factor balance risks
+        if factor_balance_score < 40:
+            risks.append("Poor factor balance - concentrated investment style exposure")
+        elif factor_balance_score < 60:
+            risks.append("Factor balance could be improved with more diversification")
         
         # Existing sector concentration check
         tech_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA']
@@ -185,10 +199,11 @@ class PortfolioHealthMonitor:
         
         return risks[:3]  # Keep max 3 risks
     
-    def _generate_recommendations_with_regime(self, score: float, max_weight: float, 
-                                            n_positions: int, correlation_score: float,
-                                            regime_fitness_score: float) -> List[str]:
-        """Enhanced recommendations including regime fitness insights"""
+    def _generate_recommendations_comprehensive(self, score: float, max_weight: float, 
+                                              n_positions: int, correlation_score: float,
+                                              regime_fitness_score: float, 
+                                              factor_balance_score: float) -> List[str]:
+        """Comprehensive recommendations including factor balance insights"""
         recommendations = []
         
         # Existing concentration recommendations
@@ -205,7 +220,7 @@ class PortfolioHealthMonitor:
         elif correlation_score < 70:
             recommendations.append("Consider adding bonds or international assets for better correlation balance")
         
-        # NEW: Regime fitness recommendations
+        # Regime fitness recommendations - KEEP EXISTING
         if regime_fitness_score < 60:
             if max_weight > 0.6:
                 recommendations.append("High concentration reduces regime adaptability - consider rebalancing")
@@ -214,12 +229,23 @@ class PortfolioHealthMonitor:
             else:
                 recommendations.append("Consider adjusting portfolio structure for current market conditions")
         
+        # NEW: Factor balance recommendations
+        if factor_balance_score < 50:
+            if max_weight > 0.4:
+                recommendations.append("Reduce concentration to improve factor balance and style diversification")
+            elif n_positions < 4:
+                recommendations.append("Add holdings across different investment styles (growth/value, small/large cap)")
+            else:
+                recommendations.append("Consider adding assets with different factor exposures")
+        elif factor_balance_score < 70:
+            recommendations.append("Good factor balance - consider minor adjustments for style diversification")
+        
         # Existing general recommendations
         if score < 70:
             recommendations.append("Consider adding defensive assets for stability")
         
         if not recommendations:
-            recommendations.append("Portfolio structure looks good - maintain current approach")
+            recommendations.append("Portfolio structure looks excellent - maintain current approach")
         
         return recommendations[:3]  # Keep max 3 recommendations
     
@@ -332,6 +358,23 @@ class PortfolioHealthMonitor:
             return 40  # High concentration risk
         else:
             return 70  # Moderate fitness
+        
+    def assess_factor_balance(self, portfolio: Dict[str, float]) -> float:
+        """Assess factor balance (simplified) - Your original logic"""
+        
+        # Simplified factor balance assessment
+        # In practice, this would analyze actual factor exposures
+        
+        num_positions = len(portfolio)
+        max_weight = max(portfolio.values()) if portfolio else 0
+        
+        # More positions generally means better factor balance (your original logic)
+        position_score = min(40, num_positions * 8)
+        
+        # Lower concentration generally means better factor balance (your original logic)
+        concentration_score = max(0, 60 - (max_weight - 0.2) * 200)
+        
+        return min(100, position_score + concentration_score)
     
 
 
@@ -845,6 +888,11 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
                      f"{health_metrics.regime_fitness_score:.0f}/100",
                      delta="Higher is better")
         
+        if hasattr(health_metrics, 'factor_balance_score'):
+            st.metric("Factor Balance", 
+                     f"{health_metrics.factor_balance_score:.0f}/100",
+                     delta="Higher is better")
+        
         # Risk level indicator
         if health_score >= 80:
             st.success("🟢 Low Risk")
@@ -880,9 +928,14 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         st.markdown("**📈 Portfolio Breakdown:**")
         
         # Create a simple breakdown chart
-        components = ['Concentration Risk', 'Diversification Score']
-        scores = [100 - health_metrics.concentration_risk,  # Invert so higher is better
-                 health_metrics.diversification_score]
+        components = ['Concentration\n(Inverted)', 'Diversification', 'Correlation', 'Regime Fitness', 'Factor Balance']
+        scores = [
+            100 - health_metrics.concentration_risk,  # Invert so higher is better
+            health_metrics.diversification_score,
+            health_metrics.correlation_score,
+            health_metrics.regime_fitness_score,
+            health_metrics.factor_balance_score
+        ]
         
         fig_components = go.Figure(data=[
             go.Bar(
@@ -895,9 +948,9 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         ])
         
         fig_components.update_layout(
-            title="Health Component Scores (Higher = Better)",
+            title="All Health Components (Higher = Better)",
             yaxis_title="Score (0-100)",
-            height=300,
+            height=350,
             showlegend=False
         )
         
