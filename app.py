@@ -1108,7 +1108,7 @@ class MVPPortfolioAnalyzer:
         # Handle equal weight format FIRST
         if 'equal' in text.lower():
             # Extract tickers after "equal weight" or "equal"
-            import re
+            
             
             # Remove "equal weight", "equal", etc. and extract tickers
             text_clean = re.sub(r'\b(equal\s*weight|equal)\b', '', text, flags=re.IGNORECASE).strip()
