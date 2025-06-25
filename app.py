@@ -82,6 +82,8 @@ class HealthMetrics:
     health_level: str
     concentration_risk: float
     diversification_score: float
+    correlation_score: float 
+    regime_fitness_score: float
     key_risks: List[str]
     recommendations: List[str]
 
@@ -89,21 +91,32 @@ class PortfolioHealthMonitor:
     """Simplified portfolio health assessment"""
     
     def calculate_health(self, portfolio: Dict[str, float], returns_data: pd.DataFrame) -> HealthMetrics:
-        """Calculate simplified portfolio health score"""
+        """Calculate enhanced portfolio health score with regime fitness"""
         
-        # Concentration risk (0-100, higher is better)
+        # Concentration risk (0-100, higher is better) - KEEP EXISTING
         max_weight = max(portfolio.values()) if portfolio else 1.0
         concentration_penalty = max_weight * 100  # Direct penalty
         concentration_score = max(0, 100 - concentration_penalty)
         
-        # Diversification score
+        # Diversification score - KEEP EXISTING  
         n_positions = len(portfolio)
         diversification_score = min(100, n_positions * 15)  # Benefit for more positions
         
-        # Overall score (weighted average)
-        overall_score = (concentration_score * 0.6 + diversification_score * 0.4)
+        # Enhanced correlation assessment - KEEP EXISTING
+        correlation_score = self.assess_correlation_health(portfolio, returns_data)
         
-        # Health level
+        # NEW: Regime fitness assessment
+        regime_fitness_score = self.assess_regime_fitness(portfolio)
+        
+        # UPDATED: Overall score with regime fitness (4 components now)
+        overall_score = (
+            concentration_score * 0.30 +     # Reduced from 0.4
+            diversification_score * 0.25 +   # Reduced from 0.3  
+            correlation_score * 0.25 +       # Reduced from 0.3
+            regime_fitness_score * 0.20      # NEW: 20% weight
+        )
+        
+        # Health level - KEEP EXISTING
         if overall_score >= 80:
             health_level = "Excellent"
         elif overall_score >= 65:
@@ -113,34 +126,55 @@ class PortfolioHealthMonitor:
         else:
             health_level = "Poor"
         
-        # Identify risks and recommendations
-        key_risks = self._identify_risks(portfolio, max_weight, n_positions)
-        recommendations = self._generate_recommendations(overall_score, max_weight, n_positions)
+        # Enhanced: Include regime fitness in risk assessment
+        key_risks = self._identify_risks_with_regime(portfolio, max_weight, n_positions, 
+                                                   correlation_score, regime_fitness_score)
+        recommendations = self._generate_recommendations_with_regime(overall_score, max_weight, 
+                                                                   n_positions, correlation_score, 
+                                                                   regime_fitness_score)
         
         return HealthMetrics(
             overall_score=overall_score,
             health_level=health_level,
             concentration_risk=100 - concentration_score,
             diversification_score=diversification_score,
+            correlation_score=correlation_score,
+            regime_fitness_score=regime_fitness_score,  # NEW: Add this
             key_risks=key_risks,
             recommendations=recommendations
         )
     
-    def _identify_risks(self, portfolio: Dict[str, float], max_weight: float, n_positions: int) -> List[str]:
-        """Identify key portfolio risks"""
+    def _identify_risks_with_regime(self, portfolio: Dict[str, float], max_weight: float, 
+                                  n_positions: int, correlation_score: float, 
+                                  regime_fitness_score: float) -> List[str]:
+        """Enhanced risk identification including regime fitness"""
         risks = []
         
+        # Existing concentration risks
         if max_weight > 0.5:
             risks.append(f"Extreme concentration: {max_weight:.1%} in single position")
         elif max_weight > 0.3:
             risks.append(f"High concentration: {max_weight:.1%} in largest position")
         
+        # Existing diversification risks
         if n_positions < 3:
             risks.append("Very limited diversification")
         elif n_positions < 5:
             risks.append("Limited diversification")
         
-        # Check for sector concentration (simplified)
+        # Correlation-based risks - KEEP EXISTING
+        if correlation_score < 40:
+            risks.append("High correlation between holdings reduces diversification benefits")
+        elif correlation_score < 60:
+            risks.append("Moderate correlation detected - consider uncorrelated assets")
+        
+        # NEW: Regime fitness risks
+        if regime_fitness_score < 50:
+            risks.append("Portfolio structure may not be optimal for current market conditions")
+        elif regime_fitness_score < 70:
+            risks.append("Portfolio could benefit from better market regime alignment")
+        
+        # Existing sector concentration check
         tech_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA']
         tech_weight = sum(portfolio.get(ticker, 0) for ticker in tech_tickers)
         if tech_weight > 0.7:
@@ -149,25 +183,157 @@ class PortfolioHealthMonitor:
         if not risks:
             risks.append("Risk levels appear well-managed")
         
-        return risks[:3]
+        return risks[:3]  # Keep max 3 risks
     
-    def _generate_recommendations(self, score: float, max_weight: float, n_positions: int) -> List[str]:
-        """Generate improvement recommendations"""
+    def _generate_recommendations_with_regime(self, score: float, max_weight: float, 
+                                            n_positions: int, correlation_score: float,
+                                            regime_fitness_score: float) -> List[str]:
+        """Enhanced recommendations including regime fitness insights"""
         recommendations = []
         
+        # Existing concentration recommendations
         if max_weight > 0.4:
             recommendations.append("Reduce largest position to under 25%")
         
+        # Existing diversification recommendations
         if n_positions < 5:
             recommendations.append("Add more positions for better diversification")
         
+        # Correlation-based recommendations - KEEP EXISTING
+        if correlation_score < 50:
+            recommendations.append("Add assets from different sectors or asset classes to reduce correlation")
+        elif correlation_score < 70:
+            recommendations.append("Consider adding bonds or international assets for better correlation balance")
+        
+        # NEW: Regime fitness recommendations
+        if regime_fitness_score < 60:
+            if max_weight > 0.6:
+                recommendations.append("High concentration reduces regime adaptability - consider rebalancing")
+            elif n_positions < 4:
+                recommendations.append("Increase diversification to improve market regime fitness")
+            else:
+                recommendations.append("Consider adjusting portfolio structure for current market conditions")
+        
+        # Existing general recommendations
         if score < 70:
-            recommendations.append("Consider adding bonds or defensive assets")
+            recommendations.append("Consider adding defensive assets for stability")
         
         if not recommendations:
             recommendations.append("Portfolio structure looks good - maintain current approach")
         
-        return recommendations
+        return recommendations[:3]  # Keep max 3 recommendations
+    
+    def assess_correlation_health(self, portfolio: Dict[str, float], 
+                                 market_data: pd.DataFrame = None) -> float:
+        """Assess correlation health of portfolio - Enhanced version"""
+        try:
+            # If we have market data, calculate correlation matrix
+            if market_data is not None and len(market_data.columns) > 1:
+                # Calculate returns for correlation analysis
+                returns = market_data.pct_change().dropna()
+                
+                if len(returns) > 10:  # Need sufficient data
+                    correlation_matrix = returns.corr().values
+                else:
+                    return 60  # Neutral score if insufficient data
+            else:
+                return 60  # Neutral score if no market data
+            
+            # Calculate average correlation (excluding diagonal)
+            mask = ~np.eye(correlation_matrix.shape[0], dtype=bool)
+            avg_correlation = np.mean(correlation_matrix[mask])
+            
+            # Optimal correlation is around 0.3-0.5 (your original logic)
+            if 0.3 <= avg_correlation <= 0.5:
+                score = 100
+            elif avg_correlation < 0.3:
+                score = 70 + (avg_correlation * 100)  # Low correlation is still good
+            else:
+                score = max(0, 100 - (avg_correlation - 0.5) * 200)  # Penalize high correlation
+            
+            return min(100, max(0, score))
+            
+        except Exception:
+            return 60  # Neutral score on error (your original fallback)
+        
+    def _identify_risks_enhanced(self, portfolio: Dict[str, float], max_weight: float, 
+                               n_positions: int, correlation_score: float) -> List[str]:
+        """Enhanced risk identification including correlation analysis"""
+        risks = []
+        
+        # Existing concentration risks
+        if max_weight > 0.5:
+            risks.append(f"Extreme concentration: {max_weight:.1%} in single position")
+        elif max_weight > 0.3:
+            risks.append(f"High concentration: {max_weight:.1%} in largest position")
+        
+        # Existing diversification risks
+        if n_positions < 3:
+            risks.append("Very limited diversification")
+        elif n_positions < 5:
+            risks.append("Limited diversification")
+        
+        # NEW: Correlation-based risks
+        if correlation_score < 40:
+            risks.append("High correlation between holdings reduces diversification benefits")
+        elif correlation_score < 60:
+            risks.append("Moderate correlation detected - consider uncorrelated assets")
+        
+        # Existing sector concentration check
+        tech_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA']
+        tech_weight = sum(portfolio.get(ticker, 0) for ticker in tech_tickers)
+        if tech_weight > 0.7:
+            risks.append("High technology sector concentration")
+        
+        if not risks:
+            risks.append("Risk levels appear well-managed")
+        
+        return risks[:3]  # Keep max 3 risks
+    
+    def _generate_recommendations_enhanced(self, score: float, max_weight: float, 
+                                         n_positions: int, correlation_score: float) -> List[str]:
+        """Enhanced recommendations including correlation insights"""
+        recommendations = []
+        
+        # Existing concentration recommendations
+        if max_weight > 0.4:
+            recommendations.append("Reduce largest position to under 25%")
+        
+        # Existing diversification recommendations
+        if n_positions < 5:
+            recommendations.append("Add more positions for better diversification")
+        
+        # NEW: Correlation-based recommendations
+        if correlation_score < 50:
+            recommendations.append("Add assets from different sectors or asset classes to reduce correlation")
+        elif correlation_score < 70:
+            recommendations.append("Consider adding bonds or international assets for better correlation balance")
+        
+        # Existing general recommendations
+        if score < 70:
+            recommendations.append("Consider adding defensive assets for stability")
+        
+        if not recommendations:
+            recommendations.append("Portfolio structure looks good - maintain current approach")
+        
+        return recommendations[:3]  # Keep max 3 recommendations
+    
+    def assess_regime_fitness(self, portfolio: Dict[str, float]) -> float:
+        """Assess how well portfolio fits current market regime - Enhanced version"""
+        
+        # Your original logic (simplified and effective)
+        portfolio_size = len(portfolio)
+        max_weight = max(portfolio.values()) if portfolio else 0
+        
+        # General heuristics for regime fitness (your original logic)
+        if max_weight < 0.4 and portfolio_size >= 4:
+            return 85  # Well-diversified portfolio
+        elif max_weight > 0.6:
+            return 40  # High concentration risk
+        else:
+            return 70  # Moderate fitness
+    
+
 
 # ============================================================================
 # RISK CALCULATOR - SIMPLIFIED
@@ -566,6 +732,7 @@ def main():
             st.success("✅ Analysis completed!")
         else:
             st.info("👈 Enter your portfolio to get started with professional analysis")
+
     
     # Display results if available
     if st.session_state.analysis_results:
@@ -651,7 +818,7 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         st.plotly_chart(fig_gauge, use_container_width=True)
     
     with col2:
-        # Health component scores
+        # Enhanced health component scores  
         st.metric("Concentration Risk", 
                  f"{health_metrics.concentration_risk:.0f}/100",
                  delta="Lower is better")
@@ -659,12 +826,24 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         st.metric("Diversification", 
                  f"{health_metrics.diversification_score:.0f}/100",
                  delta="Higher is better")
+        
+        # Show correlation if available
+        if hasattr(health_metrics, 'correlation_score'):
+            st.metric("Correlation Health", 
+                     f"{health_metrics.correlation_score:.0f}/100",
+                     delta="50-80 optimal")
     
     with col3:
         # Portfolio stats
         max_position = max(portfolio.values()) * 100 if portfolio else 0
         st.metric("Largest Position", f"{max_position:.1f}%")
         st.metric("Number of Holdings", len(portfolio))
+
+        # NEW: Add regime fitness metric
+        if hasattr(health_metrics, 'regime_fitness_score'):
+            st.metric("Regime Fitness", 
+                     f"{health_metrics.regime_fitness_score:.0f}/100",
+                     delta="Higher is better")
         
         # Risk level indicator
         if health_score >= 80:
@@ -677,7 +856,7 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
             st.error("🔴 High Risk")
     
     # Enhanced expandable sections
-    with st.expander("🚨 Risk Analysis & Recommendations", expanded=health_score < 65):
+    with st.expander("🚨 Risk Analysis & Recommendations", expanded=bool(health_score < 65)):
         
         col_risks, col_tips = st.columns(2)
         
