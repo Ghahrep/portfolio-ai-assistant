@@ -286,9 +286,16 @@ class SimpleAIAssistant:
     
     def _explain_health(self, data: Dict) -> str:
         """Explain portfolio health score"""
-        health = data.get('health_metrics', {})
-        score = health.get('overall_score', 65)
-        level = health.get('health_level', 'Fair')
+        health_metrics = data.get('health_metrics')
+        
+        if hasattr(health_metrics, 'overall_score'):
+            # health_metrics is a HealthMetrics dataclass
+            score = health_metrics.overall_score
+            level = health_metrics.health_level
+        else:
+            # health_metrics is a dictionary (fallback)
+            score = health_metrics.get('overall_score', 65) if health_metrics else 65
+            level = health_metrics.get('health_level', 'Fair') if health_metrics else 'Fair'
         
         return f"Your portfolio health score is {score:.0f}/100 ({level}). This reflects how well-diversified and balanced your holdings are. {'Great job!' if score > 80 else 'Some room for improvement.' if score > 60 else 'Consider rebalancing for better health.'}"
     
@@ -307,8 +314,14 @@ class SimpleAIAssistant:
     
     def _suggest_improvements(self, data: Dict) -> str:
         """Suggest portfolio improvements"""
-        health = data.get('health_metrics', {})
-        recommendations = health.get('recommendations', [])
+        health_metrics = data.get('health_metrics')
+        
+        if hasattr(health_metrics, 'recommendations'):
+            # health_metrics is a HealthMetrics dataclass
+            recommendations = health_metrics.recommendations
+        else:
+            # health_metrics is a dictionary (fallback)
+            recommendations = health_metrics.get('recommendations', []) if health_metrics else []
         
         if recommendations:
             return f"To improve your portfolio: {recommendations[0]}. This would help reduce concentration risk and improve diversification."
@@ -551,9 +564,11 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     
     with col1:
         # Health gauge
+        health_score = health_metrics.overall_score if hasattr(health_metrics, 'overall_score') else 65
+        
         fig_gauge = go.Figure(go.Indicator(
             mode="gauge+number",
-            value=health_metrics.overall_score,
+            value=health_score,
             title={'text': "Health Score"},
             gauge={
                 'axis': {'range': [0, 100]},
