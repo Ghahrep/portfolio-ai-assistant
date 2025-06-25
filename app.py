@@ -713,6 +713,13 @@ def main():
         
         if st.button("Balanced ETFs", use_container_width=True):
             st.session_state.portfolio_input = "Equal weight SPY QQQ BND VTI"
+
+        # Add cache clear button
+        if st.button("🗑️ Clear Cache", use_container_width=True):
+            st.session_state.clear()
+            st.cache_resource.clear()
+            st.rerun()
+
         
         st.markdown("---")
         st.info("💡 Enter your portfolio above and get professional risk analysis with AI insights!")
