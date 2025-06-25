@@ -92,36 +92,56 @@ class PortfolioHealthMonitor:
     """Simplified portfolio health assessment"""
     
     def calculate_health(self, portfolio: Dict[str, float], returns_data: pd.DataFrame) -> HealthMetrics:
-        """Calculate comprehensive portfolio health score with all 5 components"""
+        """Calculate comprehensive portfolio health score with debug logging"""
+        
+        print(f"🔍 DEBUG: Starting health calculation for portfolio: {portfolio}")
         
         # Concentration risk (0-100, higher is better) - KEEP EXISTING
         max_weight = max(portfolio.values()) if portfolio else 1.0
         concentration_penalty = max_weight * 100  # Direct penalty
         concentration_score = max(0, 100 - concentration_penalty)
+        print(f"✅ Concentration score: {concentration_score}")
         
         # Diversification score - KEEP EXISTING  
         n_positions = len(portfolio)
         diversification_score = min(100, n_positions * 15)  # Benefit for more positions
+        print(f"✅ Diversification score: {diversification_score}")
         
-        # Enhanced correlation assessment - KEEP EXISTING
-        correlation_score = self.assess_correlation_health(portfolio, returns_data)
+        # Enhanced correlation assessment with debug
+        try:
+            correlation_score = self.assess_correlation_health(portfolio, returns_data)
+            print(f"✅ Correlation score: {correlation_score}")
+        except Exception as e:
+            print(f"❌ Correlation assessment failed: {e}")
+            correlation_score = 70  # Fallback
         
-        # Regime fitness assessment - KEEP EXISTING
-        regime_fitness_score = self.assess_regime_fitness(portfolio)
+        # Regime fitness assessment with debug
+        try:
+            regime_fitness_score = self.assess_regime_fitness(portfolio)
+            print(f"✅ Regime fitness score: {regime_fitness_score}")
+        except Exception as e:
+            print(f"❌ Regime fitness assessment failed: {e}")
+            regime_fitness_score = 70  # Fallback
         
-        # NEW: Factor balance assessment
-        factor_balance_score = self.assess_factor_balance(portfolio)
+        # Factor balance assessment with debug
+        try:
+            factor_balance_score = self.assess_factor_balance(portfolio)
+            print(f"✅ Factor balance score: {factor_balance_score}")
+        except Exception as e:
+            print(f"❌ Factor balance assessment failed: {e}")
+            factor_balance_score = 70  # Fallback
         
-        # UPDATED: Overall score with all 5 components (balanced weighting)
+        # Overall score calculation
         overall_score = (
-            concentration_score * 0.25 +     # Reduced slightly
-            diversification_score * 0.20 +   # Reduced slightly  
-            correlation_score * 0.20 +       # Reduced slightly
-            regime_fitness_score * 0.20 +    # Keep existing
-            factor_balance_score * 0.15      # NEW: 15% weight
+            concentration_score * 0.25 +     
+            diversification_score * 0.20 +   
+            correlation_score * 0.20 +       
+            regime_fitness_score * 0.20 +    
+            factor_balance_score * 0.15      
         )
+        print(f"🎯 Overall health score: {overall_score}")
         
-        # Health level - KEEP EXISTING
+        # Health level
         if overall_score >= 80:
             health_level = "Excellent"
         elif overall_score >= 65:
@@ -131,14 +151,20 @@ class PortfolioHealthMonitor:
         else:
             health_level = "Poor"
         
-        # Enhanced: Include factor balance in risk assessment
-        key_risks = self._identify_risks_comprehensive(portfolio, max_weight, n_positions, 
-                                                     correlation_score, regime_fitness_score,
-                                                     factor_balance_score)
-        recommendations = self._generate_recommendations_comprehensive(overall_score, max_weight, 
-                                                                     n_positions, correlation_score, 
-                                                                     regime_fitness_score,
-                                                                     factor_balance_score)
+        # Risk and recommendation assessment with debug
+        try:
+            key_risks = self._identify_risks_comprehensive(portfolio, max_weight, n_positions, 
+                                                         correlation_score, regime_fitness_score,
+                                                         factor_balance_score)
+            recommendations = self._generate_recommendations_comprehensive(overall_score, max_weight, 
+                                                                         n_positions, correlation_score, 
+                                                                         regime_fitness_score,
+                                                                         factor_balance_score)
+            print(f"✅ Risks and recommendations generated successfully")
+        except Exception as e:
+            print(f"❌ Risk/recommendation generation failed: {e}")
+            key_risks = ["Risk assessment temporarily unavailable"]
+            recommendations = ["Please try analyzing again"]
         
         return HealthMetrics(
             overall_score=overall_score,
@@ -147,7 +173,7 @@ class PortfolioHealthMonitor:
             diversification_score=diversification_score,
             correlation_score=correlation_score,
             regime_fitness_score=regime_fitness_score,
-            factor_balance_score=factor_balance_score,  # NEW: Add this
+            factor_balance_score=factor_balance_score,
             key_risks=key_risks,
             recommendations=recommendations
         )
