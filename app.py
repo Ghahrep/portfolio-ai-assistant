@@ -18,7 +18,14 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 from scipy.optimize import minimize
 import warnings
+import streamlit as st 
 warnings.filterwarnings('ignore')
+
+st.set_page_config(
+    page_title="Portfolio Risk Analyzer MVP",
+    page_icon="📊", 
+    layout="wide"
+)
 
 @dataclass
 class OptimizationResults:
@@ -624,6 +631,209 @@ class PortfolioHealthMonitor:
         return min(100, position_score + concentration_score)
     
 
+class EnhancedIntegratedRiskManagementAgent:
+    """Temporary simplified AI agent for Phase 2"""
+    
+    def __init__(self):
+        self.user_contexts = {}
+        
+    def process_message(self, user_id: str, message: str) -> str:
+        """Process user message and return AI response"""
+        
+        # Store user context
+        if user_id not in self.user_contexts:
+            self.user_contexts[user_id] = {
+                'portfolio': None,
+                'portfolio_value': 1000000
+            }
+        
+        context = self.user_contexts[user_id]
+        message_lower = message.lower()
+        
+        try:
+            # Simple intent classification
+            if any(word in message_lower for word in ['risky', 'risk', 'dangerous']):
+                return self._handle_risk_analysis(context, message)
+            elif any(word in message_lower for word in ['optimize', 'improve', 'better']):
+                return self._handle_optimization(context, message)
+            elif any(word in message_lower for word in ['health', 'healthy']):
+                return self._handle_health_analysis(context, message)
+            elif any(word in message_lower for word in ['hello', 'hi', 'hey']):
+                return self._handle_greeting(context, message)
+            elif 'i have' in message_lower and any(c.isalpha() for c in message.upper()):
+                return self._handle_portfolio_input(context, message)
+            else:
+                return self._handle_general_query(context, message)
+                
+        except Exception as e:
+            return f"I encountered an issue processing your request: {str(e)}. Please try asking about your portfolio risk, health, or optimization."
+    
+    def _handle_greeting(self, context, message):
+        if context.get('portfolio'):
+            return f"""👋 Welcome back! I can see you have a portfolio with {len(context['portfolio'])} positions.
+
+🚀 **What would you like to explore today?**
+• "How risky is my portfolio?" - Complete risk analysis
+• "Check my portfolio health" - Health assessment
+• "Optimize my allocation" - Portfolio optimization
+• "What if there's a market crash?" - Stress testing
+
+What interests you most?"""
+        else:
+            return """👋 Hello! I'm your Portfolio AI Assistant.
+
+🚀 **I can help you with:**
+• Portfolio risk analysis with VaR calculations
+• Health assessment and scoring
+• Portfolio optimization for better returns
+• Stress testing against market scenarios
+
+**To get started, share your portfolio:**
+• "I have 40% AAPL, 30% MSFT, 20% GOOGL, 10% BND"
+• "Equal weight: AAPL MSFT GOOGL AMZN"
+
+What's your portfolio composition?"""
+    
+    def _handle_portfolio_input(self, context, message):
+        return """📊 **Portfolio Analysis Request Received**
+
+I can see you're sharing your portfolio allocation. To get the most comprehensive analysis, please use the main portfolio input section above and click "🚀 Analyze Portfolio" - this will give you:
+
+• **Complete Risk Analysis** with VaR and volatility metrics
+• **Portfolio Health Scoring** with detailed recommendations  
+• **Stress Testing** against crisis scenarios
+• **Optimization Opportunities** for better returns
+
+Once you've run the full analysis above, I can answer specific questions about your results!
+
+**Quick Questions I Can Answer Now:**
+• "How does portfolio concentration affect risk?"
+• "What makes a portfolio healthy?"
+• "How does optimization work?"
+
+What would you like to know?"""
+    
+    def _handle_risk_analysis(self, context, message):
+        return """📊 **Portfolio Risk Analysis Insights**
+
+**Understanding Portfolio Risk:**
+Portfolio risk comes from several key factors:
+
+🎯 **Concentration Risk**: Large positions in single stocks increase volatility
+• Portfolios with >40% in one position show higher drawdowns
+• Diversification across 5-8 positions reduces risk significantly
+
+📉 **Market Risk**: All stocks can decline together during crises
+• 2008 crisis: Even diversified portfolios lost 20-40%
+• 2020 COVID shock: Technology stocks were more resilient
+
+⚡ **Volatility Risk**: Price swings affect your emotional decision-making
+• Higher volatility = larger daily swings in portfolio value
+• VaR (Value at Risk) measures potential losses on bad days
+
+**💡 Risk Management Strategies:**
+• Limit single positions to <25% of portfolio
+• Include defensive assets like bonds or dividend stocks
+• Regular rebalancing maintains target risk levels
+
+**Want me to explain any specific risk concept in more detail?**"""
+    
+    def _handle_optimization(self, context, message):
+        return """🎯 **Portfolio Optimization Insights**
+
+**How Portfolio Optimization Works:**
+Modern portfolio optimization finds the best balance between risk and return:
+
+📈 **Maximum Sharpe Ratio**: Best risk-adjusted returns
+• Increases return while managing risk levels
+• Typically reduces concentration in volatile positions
+• Adds diversification across uncorrelated assets
+
+🛡️ **Minimum Risk**: Lowest possible volatility
+• Focuses on defensive positions and bonds
+• Sacrifices some return for stability
+• Good for conservative investors
+
+⚖️ **The Math Behind It:**
+• Uses historical correlations between assets
+• Finds weights that optimize your chosen objective
+• Considers constraints (no short selling, position limits)
+
+**💡 Optimization Benefits:**
+• **Better Sharpe Ratios**: More return per unit of risk
+• **Reduced Drawdowns**: Smaller losses during market stress
+• **Improved Diversification**: Less correlation between holdings
+
+**To see optimization in action, use the Portfolio Optimization section above after analyzing your portfolio!**
+
+**Want me to explain any specific optimization concept?**"""
+    
+    def _handle_health_analysis(self, context, message):
+        return """🏥 **Portfolio Health Assessment Guide**
+
+**What Makes a Portfolio Healthy:**
+Portfolio health reflects how well-structured your investments are:
+
+🎯 **Concentration Analysis (25% weight)**
+• Healthy: No single position >25% 
+• Warning: Any position >40%
+• Critical: Any position >50%
+
+📊 **Diversification Score (20% weight)**  
+• Excellent: 6+ positions across sectors
+• Good: 4-5 well-chosen positions
+• Poor: 2-3 highly concentrated positions
+
+🔗 **Correlation Health (20% weight)**
+• Optimal: 30-50% average correlation between holdings
+• Problem: >70% correlation (moves together too much)
+• Issue: <20% correlation (may indicate poor fit)
+
+⚖️ **Factor Balance (15% weight)**
+• Balanced exposure across growth/value, large/small cap
+• Not over-concentrated in single investment style
+
+🌊 **Regime Fitness (20% weight)**
+• How well portfolio adapts to different market conditions
+• High concentration reduces adaptability
+
+**💡 Health Improvement Tips:**
+• **Score 80+**: Excellent - maintain current approach
+• **Score 60-79**: Good - minor tweaks needed  
+• **Score <60**: Needs restructuring for better balance
+
+**Run a full analysis above to see your exact health score and recommendations!**"""
+    
+    def _handle_general_query(self, context, message):
+        return """🤖 **AI Portfolio Assistant - How I Can Help**
+
+I specialize in professional portfolio analysis and can help with:
+
+📊 **Risk Analysis**
+• "How risky is my portfolio?" - VaR, volatility, drawdown analysis
+• "What happens in a market crash?" - Stress testing insights
+• "How does concentration affect risk?" - Risk factor explanations
+
+🏥 **Health Assessment** 
+• "Check my portfolio health" - 5-component health scoring
+• "How do I improve my portfolio?" - Specific recommendations
+• "What's my diversification score?" - Diversification analysis
+
+🎯 **Optimization Guidance**
+• "How does optimization work?" - Algorithm explanations  
+• "Should I rebalance?" - Allocation improvement insights
+• "What's a good Sharpe ratio?" - Performance metrics guidance
+
+📈 **Market Education**
+• "What is Value at Risk?" - Risk metric explanations
+• "How do correlations work?" - Diversification principles
+• "What makes a good portfolio?" - Investment best practices
+
+**💡 For comprehensive analysis, use the main sections above, then ask me specific questions about your results!**
+
+**What aspect of portfolio management would you like to explore?**"""
+    
+
 
 # ============================================================================
 # RISK CALCULATOR - SIMPLIFIED
@@ -861,6 +1071,7 @@ class MVPPortfolioAnalyzer:
         self.risk_calculator = RiskCalculator()
         self.ai_assistant = SimpleAIAssistant()
         self.optimizer = PortfolioOptimizer()
+        self.ai_agent = EnhancedIntegratedRiskManagementAgent()
     
     def analyze_portfolio(self, portfolio: Dict[str, float], portfolio_value: float = 1000000) -> Dict:
         """Complete portfolio analysis"""
@@ -890,10 +1101,32 @@ class MVPPortfolioAnalyzer:
         }
     
     def parse_portfolio_input(self, text: str) -> Optional[Dict[str, float]]:
-        """Parse portfolio input from text"""
+        """Parse portfolio input from text with improved equal weight handling"""
         portfolio = {}
+        text = text.strip()
         
-        # Try percentage format first
+        # Handle equal weight format FIRST
+        if 'equal' in text.lower():
+            # Extract tickers after "equal weight" or "equal"
+            import re
+            
+            # Remove "equal weight", "equal", etc. and extract tickers
+            text_clean = re.sub(r'\b(equal\s*weight|equal)\b', '', text, flags=re.IGNORECASE).strip()
+            
+            # Find all ticker symbols (1-5 characters, letters only)
+            tickers = re.findall(r'\b([A-Z]{1,5})\b', text_clean.upper())
+            
+            # Remove duplicates while preserving order
+            unique_tickers = []
+            for ticker in tickers:
+                if ticker not in unique_tickers:
+                    unique_tickers.append(ticker)
+            
+            if unique_tickers and len(unique_tickers) <= 10:
+                weight = 1.0 / len(unique_tickers)
+                return {ticker: weight for ticker in unique_tickers}
+        
+        # Handle percentage format
         percent_matches = re.findall(r'(\d+(?:\.\d+)?)%\s+([A-Z]{1,5})', text.upper())
         if percent_matches:
             total_pct = 0
@@ -908,12 +1141,19 @@ class MVPPortfolioAnalyzer:
                 portfolio = {k: v * factor for k, v in portfolio.items()}
                 return portfolio
         
-        # Try equal weight format
-        if 'equal' in text.lower():
-            tickers = re.findall(r'\b([A-Z]{1,5})\b', text.upper())
-            if tickers and len(tickers) <= 10:
-                weight = 1.0 / len(tickers)
-                return {ticker: weight for ticker in tickers}
+        # Handle format like "40% AAPL, 30% MSFT, 20% GOOGL, 10% BND"
+        percent_matches_alt = re.findall(r'(\d+(?:\.\d+)?)%\s+([A-Z]{1,5})', text.upper())
+        if percent_matches_alt:
+            total_pct = 0
+            for pct, ticker in percent_matches_alt:
+                weight = float(pct) / 100
+                portfolio[ticker] = weight
+                total_pct += float(pct)
+            
+            if 90 <= total_pct <= 110:
+                factor = 1.0 / (total_pct / 100)
+                portfolio = {k: v * factor for k, v in portfolio.items()}
+                return portfolio
         
         return None
     
@@ -1090,128 +1330,24 @@ def display_optimization_results(opt_results: OptimizationResults):
             st.success(f"⚡ **Excellent Sharpe Improvement**: +{opt_results.improvement_summary['sharpe_improvement']:.2f} better risk-adjusted returns")
 
         
-        
+    
 
-# ============================================================================
-# STREAMLIT UI
-# ============================================================================
+# Header - NO INDENTATION!
+st.markdown("""
+<div style="text-align: center; padding: 2rem 0; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin-bottom: 2rem;">
+    <h1>📊 Portfolio Risk Analyzer</h1>
+    <p>Professional portfolio analysis with AI insights</p>
+</div>
+""", unsafe_allow_html=True)
 
-def main():
-    st.set_page_config(
-        page_title="Portfolio Risk Analyzer MVP",
-        page_icon="📊",
-        layout="wide"
-    )
-    
-    # Header
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin-bottom: 2rem;">
-        <h1>📊 Portfolio Risk Analyzer</h1>
-        <p>Professional portfolio analysis with AI insights</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Initialize analyzer
-    @st.cache_resource
-    def get_analyzer():
-        return MVPPortfolioAnalyzer()
-    
-    analyzer = get_analyzer()
-    
-    # Initialize session state
-    if 'analysis_results' not in st.session_state:
-        st.session_state.analysis_results = None
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-    
-    # Sidebar with examples
-    with st.sidebar:
-        st.header("🚀 Quick Examples")
-        
-        if st.button("Conservative Portfolio", use_container_width=True):
-            st.session_state.portfolio_input = "40% VOO, 30% BND, 20% VTI, 10% VXUS"
-        
-        if st.button("Growth Portfolio", use_container_width=True):
-            st.session_state.portfolio_input = "30% AAPL, 25% MSFT, 20% GOOGL, 15% AMZN, 10% TSLA"
-        
-        if st.button("Balanced ETFs", use_container_width=True):
-            st.session_state.portfolio_input = "Equal weight SPY QQQ BND VTI"
+# Initialize analyzer - NO INDENTATION!
+@st.cache_resource
+def get_analyzer():
+    return MVPPortfolioAnalyzer()
 
-        # Add cache clear button
-        if st.button("🗑️ Clear Cache", use_container_width=True):
-            st.session_state.clear()
-            st.cache_resource.clear()
-            st.rerun()
+analyzer = get_analyzer()
 
-        
-        st.markdown("---")
-        st.info("💡 Enter your portfolio above and get professional risk analysis with AI insights!")
-    
-    # Main content
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.header("📝 Portfolio Input")
-        
-        portfolio_input = st.text_area(
-            "Enter your portfolio",
-            value=st.session_state.get('portfolio_input', ''),
-            height=120,
-            placeholder="Examples:\n• 40% AAPL, 30% MSFT, 20% GOOGL, 10% BND\n• Equal weight SPY QQQ VTI\n• 60% VOO, 40% BND",
-            help="Use percentage format or 'Equal weight' followed by tickers"
-        )
-        
-        portfolio_value = st.number_input(
-            "Portfolio Value ($)",
-            min_value=1000,
-            value=1000000,
-            step=10000,
-            format="%d"
-        )
-        
-        analyze_button = st.button("🚀 Analyze Portfolio", type="primary", use_container_width=True)
-        
-        # Portfolio validation feedback
-        if portfolio_input:
-            portfolio = analyzer.parse_portfolio_input(portfolio_input)
-            if portfolio:
-                st.success(f"✅ Valid portfolio with {len(portfolio)} positions")
-                for ticker, weight in portfolio.items():
-                    st.write(f"• **{ticker}**: {weight:.1%}")
-            else:
-                st.warning("⚠️ Portfolio format not recognized. Try the examples above.")
-    
-    with col2:
-        st.header("📊 Analysis Results")
-        
-        if analyze_button and portfolio_input:
-            portfolio = analyzer.parse_portfolio_input(portfolio_input)
-            
-            if portfolio:
-                try:
-                    with st.spinner("🔄 Analyzing your portfolio with real market data..."):
-                        results = analyzer.analyze_portfolio(portfolio, portfolio_value)
-                        st.session_state.analysis_results = results
-                        st.success("✅ Analysis completed!")
-                
-                except Exception as e:
-                    st.error(f"❌ Analysis failed: {str(e)}")
-                    if "Invalid ticker" in str(e):
-                        st.info("💡 Please check your ticker symbols and try again")
-            else:
-                st.error("❌ Please enter a valid portfolio format")
-        
-        elif st.session_state.analysis_results:
-            st.success("✅ Analysis completed!")
-        else:
-            st.info("👈 Enter your portfolio to get started with professional analysis")
-
-    
-    # Display results if available
-    if st.session_state.analysis_results:
-        display_analysis_results(st.session_state.analysis_results, analyzer)
-
-def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
+def display_analysis_results(results: dict, analyzer):
     """Display comprehensive analysis results"""
     
     portfolio = results['portfolio']
@@ -1224,6 +1360,7 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     st.markdown("### 📈 Portfolio Overview")
     
     # Portfolio pie chart
+    import plotly.graph_objects as go
     fig_pie = go.Figure(data=[go.Pie(
         labels=list(portfolio.keys()),
         values=list(portfolio.values()),
@@ -1258,12 +1395,12 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         st.metric("Max Drawdown", f"{abs(max_drawdown):.1%}")
     
     # Portfolio health
-    st.markdown("### 🏥 Enhanced Portfolio Health")
+    st.markdown("### 🏥 Portfolio Health")
     
-    col1, col2, col3, col4= st.columns([2, 1, 1,1])
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
     
     with col1:
-        # Enhanced health gauge - KEEP THIS AS IS
+        # Health gauge
         health_score = health_metrics.overall_score if hasattr(health_metrics, 'overall_score') else 65
         
         fig_gauge = go.Figure(go.Indicator(
@@ -1291,7 +1428,6 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         st.plotly_chart(fig_gauge, use_container_width=True)
     
     with col2:
-        # Fixed health component scores - USE REAL VALUES
         st.metric("Concentration Risk", 
                  f"{health_metrics.concentration_risk:.0f}/100",
                  delta="Lower is better")
@@ -1299,30 +1435,13 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
         st.metric("Diversification", 
                  f"{health_metrics.diversification_score:.0f}/100",
                  delta="Higher is better")
-        
-        # Show correlation with real value
-        st.metric("Correlation Health", 
-                 f"{health_metrics.correlation_score:.0f}/100",
-                 delta="50-80 optimal")
     
     with col3:
-        # Portfolio stats with real values
         max_position = max(portfolio.values()) * 100 if portfolio else 0
         st.metric("Largest Position", f"{max_position:.1f}%")
         st.metric("Number of Holdings", len(portfolio))
-        
-        # Show regime fitness with real value
-        st.metric("Regime Fitness", 
-                 f"{health_metrics.regime_fitness_score:.0f}/100",
-                 delta="Higher is better")
     
     with col4:
-        # Show factor balance with real value - FIXED!
-        st.metric("Factor Balance", 
-                 f"{health_metrics.factor_balance_score:.0f}/100",
-                 delta="Higher is better")
-        
-        # Risk level indicator with real health score
         if health_score >= 80:
             st.success("🟢 Low Risk")
         elif health_score >= 75:
@@ -1331,69 +1450,6 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
             st.warning("🟠 Elevated Risk")
         else:
             st.error("🔴 High Risk")
-    
-    # Enhanced expandable sections
-    with st.expander("🚨 Risk Analysis & Recommendations", expanded=bool(health_score < 65)):
-        
-        col_risks, col_tips = st.columns(2)
-        
-        with col_risks:
-            st.markdown("**🎯 Key Risk Factors:**")
-            for risk in health_metrics.key_risks:
-                if "concentration" in risk.lower():
-                    st.warning(f"⚠️ {risk}")
-                elif "diversification" in risk.lower():
-                    st.info(f"ℹ️ {risk}")
-                else:
-                    st.write(f"• {risk}")
-        
-        with col_tips:
-            st.markdown("**💡 Improvement Actions:**")
-            for i, rec in enumerate(health_metrics.recommendations, 1):
-                st.write(f"**{i}.** {rec}")
-    
-    # Simple portfolio insights
-    with st.expander("📊 Portfolio Insights", expanded=False):
-        st.markdown("**📈 Portfolio Breakdown:**")
-        
-        # Create a simple breakdown chart
-        components = ['Concentration\n(Inverted)', 'Diversification', 'Correlation', 'Regime Fitness', 'Factor Balance']
-        scores = [
-            100 - health_metrics.concentration_risk,    # Real value: ~70
-            health_metrics.diversification_score,       # Real value: 75
-            health_metrics.correlation_score,           # Real value: ~83
-            health_metrics.regime_fitness_score,        # Real value: 85
-            health_metrics.factor_balance_score         # Real value: 80
-        ]
-        
-        fig_components = go.Figure(data=[
-            go.Bar(
-                x=components,
-                y=scores,
-                text=[f"{score:.0f}" for score in scores],
-                textposition='auto',
-                marker_color=['red' if s < 60 else 'orange' if s < 75 else 'green' for s in scores]
-            )
-        ])
-        
-        fig_components.update_layout(
-            title="All Health Components (Higher = Better)",
-            yaxis_title="Score (0-100)",
-            height=350,
-            showlegend=False
-        )
-        
-        st.plotly_chart(fig_components, use_container_width=True)
-        
-        # Quick insights
-        st.markdown("**💡 Quick Insights:**")
-        if max_position > 40:
-            st.write(f"• 🎯 **Action**: Consider reducing {max_position:.1f}% position")
-        elif len(portfolio) < 4:
-            st.write(f"• 🎯 **Suggestion**: Add more holdings for diversification")
-        else:
-            st.write(f"• ✅ **Status**: Portfolio structure looks balanced")
-    
     
     # Stress testing
     st.markdown("### 🔥 Stress Test Results")
@@ -1424,75 +1480,455 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
             
     except Exception as e:
         st.warning("Stress test visualization temporarily unavailable. Analysis results above are still valid.")
-        # Fallback display
-        if stress_tests:
-            st.markdown("**Crisis Scenario Summary:**")
-            for scenario, data in stress_tests.items():
-                st.write(f"• **{scenario}**: Potential significant losses during crisis")
-        else:
-            st.info("Stress testing will be available with next analysis update.")
-    
-    # AI Assistant
-    st.markdown("### 🤖 AI Assistant")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("💡 Why is my portfolio risky?", key="risky_btn", use_container_width=True):
-            try:
-                response = analyzer.ai_assistant.process_question("Why is my portfolio risky?", results)
-            except Exception:
-                response = "Your portfolio shows some concentration that could increase risk during market volatility. The main drivers are typically large positions in similar types of investments that tend to move together."
-            st.session_state.chat_history.append(("Why is my portfolio risky?", response))
-            st.rerun()
-        
-        if st.button("🏥 Explain my health score", key="health_btn", use_container_width=True):
-            try:
-                response = analyzer.ai_assistant.process_question("Explain my health score", results)
-            except Exception:
-                response = "Your portfolio health score reflects how well-diversified your holdings are. A higher score indicates better balance and lower concentration risk."
-            st.session_state.chat_history.append(("Explain my health score", response))
-            st.rerun()
-    
-    with col2:
-        if st.button("💥 What if markets crash?", key="crash_btn", use_container_width=True):
-            try:
-                response = analyzer.ai_assistant.process_question("What if markets crash?", results)
-            except Exception:
-                response = "During market stress, your portfolio could see significant losses depending on its concentration and diversification. More balanced portfolios typically weather crises better."
-            st.session_state.chat_history.append(("What if markets crash?", response))
-            st.rerun()
-        
-        if st.button("🛠️ How can I improve?", key="improve_btn", use_container_width=True):
-            try:
-                response = analyzer.ai_assistant.process_question("How can I improve?", results)
-            except Exception:
-                response = "To improve your portfolio, consider reducing concentration in large positions and adding diversification across different sectors or asset types like bonds, REITs, or international stocks."
-            st.session_state.chat_history.append(("How can I improve?", response))
-            st.rerun()
-    
-    # Custom question
-    with st.expander("💬 Ask a Custom Question"):
-        custom_question = st.text_input("Your question:", placeholder="Ask about your portfolio...")
-        if st.button("Ask AI", key="custom_ai_btn") and custom_question:
-            try:
-                response = analyzer.ai_assistant.process_question(custom_question, results)
-            except Exception:
-                response = "I can help explain your portfolio's risk characteristics, health score, or suggest improvements. What specific aspect interests you?"
-            st.session_state.chat_history.append((custom_question, response))
-            st.rerun()
-    
-    # Chat history
-    if st.session_state.chat_history:
-        st.markdown("**💬 Conversation:**")
-        for question, answer in st.session_state.chat_history[-3:]:  # Show last 3
-            st.markdown(f"**🙋 You:** {question}")
-            st.markdown(f"**🤖 AI:** {answer}")
-            st.markdown("---")
 
-    display_portfolio_optimization_section(results, analyzer)
+    
+    st.markdown("### 🎯 Portfolio Optimization")
+
+    # Optimization controls
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.write("**Optimize your portfolio allocation for better risk-adjusted returns**")
+        
+        optimization_type = st.selectbox(
+            "Optimization Objective:",
+            ["max_sharpe", "min_risk", "max_return"],
+            format_func=lambda x: {
+                "max_sharpe": "🎯 Maximize Sharpe Ratio (Best Risk-Adjusted Returns)",
+                "min_risk": "🛡️ Minimize Risk (Lowest Volatility)", 
+                "max_return": "📈 Maximize Return (Target Current Risk Level)"
+            }[x],
+            help="Choose your optimization objective based on your investment goals"
+        )
+
+    with col2:
+        run_optimization = st.button(
+            "🚀 Optimize Portfolio", 
+            type="primary",
+            use_container_width=True,
+            help="Run optimization algorithm on your portfolio"
+        )
+
+    # Run optimization when button clicked
+    if run_optimization:
+        try:
+            with st.spinner("🔄 Running portfolio optimization algorithms..."):
+                optimization_results = analyzer.optimize_portfolio_allocation(
+                    portfolio, results['market_data'], optimization_type
+                )
+            
+            # Display optimization results
+            display_optimization_results(optimization_results)
+            
+        except Exception as e:
+            st.error(f"❌ Optimization failed: {str(e)}")
+            st.info("💡 This typically happens with insufficient market data. Please try with more liquid securities.")
+
+
+# Initialize session state - NO INDENTATION!
+if 'analysis_results' not in st.session_state:
+    st.session_state.analysis_results = None
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+# Sidebar with examples - NO INDENTATION!
+with st.sidebar:
+    st.header("🚀 Quick Examples")
+    
+    if st.button("Conservative Portfolio", use_container_width=True):
+        st.session_state.portfolio_input = "40% VOO, 30% BND, 20% VTI, 10% VXUS"
+    
+    if st.button("Growth Portfolio", use_container_width=True):
+        st.session_state.portfolio_input = "30% AAPL, 25% MSFT, 20% GOOGL, 15% AMZN, 10% TSLA"
+    
+    if st.button("Balanced ETFs", use_container_width=True):
+        st.session_state.portfolio_input = "Equal weight SPY QQQ BND VTI"
+
+    # Add cache clear button
+    if st.button("🗑️ Clear Cache", use_container_width=True):
+        st.session_state.clear()
+        st.cache_resource.clear()
+        st.rerun()
+
+    st.markdown("---")
+    st.info("💡 Enter your portfolio above and get professional risk analysis with AI insights!")
+
+# Main content - NO INDENTATION!
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.header("📝 Portfolio Input")
+    
+    portfolio_input = st.text_area(
+        "Enter your portfolio",
+        value=st.session_state.get('portfolio_input', ''),
+        height=120,
+        placeholder="Examples:\n• 40% AAPL, 30% MSFT, 20% GOOGL, 10% BND\n• Equal weight SPY QQQ VTI\n• 60% VOO, 40% BND",
+        help="Use percentage format or 'Equal weight' followed by tickers"
+    )
+    
+    portfolio_value = st.number_input(
+        "Portfolio Value ($)",
+        min_value=1000,
+        value=1000000,
+        step=10000,
+        format="%d"
+    )
+    
+    analyze_button = st.button("🚀 Analyze Portfolio", type="primary", use_container_width=True)
+    
+    # Portfolio validation feedback
+    if portfolio_input:
+        portfolio = analyzer.parse_portfolio_input(portfolio_input)
+        if portfolio:
+            st.success(f"✅ Valid portfolio with {len(portfolio)} positions")
+            for ticker, weight in portfolio.items():
+                st.write(f"• **{ticker}**: {weight:.1%}")
+        else:
+            st.warning("⚠️ Portfolio format not recognized. Try the examples above.")
+
+with col2:
+    st.header("📊 Analysis Results")
+    
+    if analyze_button and portfolio_input:
+        portfolio = analyzer.parse_portfolio_input(portfolio_input)
+        
+        if portfolio:
+            try:
+                with st.spinner("🔄 Analyzing your portfolio with real market data..."):
+                    results = analyzer.analyze_portfolio(portfolio, portfolio_value)
+                    st.session_state.analysis_results = results
+                    st.success("✅ Analysis completed!")
+            
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                if "Invalid ticker" in str(e):
+                    st.info("💡 Please check your ticker symbols and try again")
+        else:
+            st.error("❌ Please enter a valid portfolio format")
+    
+    elif st.session_state.analysis_results:
+        st.success("✅ Analysis completed!")
+    else:
+        st.info("👈 Enter your portfolio to get started with professional analysis")
+
+# Display results if available - NO INDENTATION!
+if st.session_state.analysis_results:
+    display_analysis_results(st.session_state.analysis_results, analyzer)
+
+
+# AI Assistant Section - NO INDENTATION!
+st.markdown("---")
+st.markdown("## 🤖 Enhanced AI Portfolio Assistant")
+st.markdown("*Ask me anything about your portfolio - I understand natural conversation!*")
+
+# Initialize session state for conversation
+if 'conversation_history' not in st.session_state:
+    st.session_state.conversation_history = []
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = f"user_{int(time.time())}"
+
+# Chat interface
+user_message = st.text_input(
+    "💬 Ask me about your portfolio:",
+    placeholder="How risky is my portfolio? Can you optimize it? Check my portfolio health...",
+    key="ai_chat_input"
+)
+
+# Simple AI response function
+def get_ai_response(message: str) -> str:
+    """Enhanced AI response that connects to actual analysis results"""
+    message_lower = message.lower()
+    
+    # Get the actual analysis results from session state
+    analysis_results = st.session_state.get('analysis_results', None)
+    
+    if any(word in message_lower for word in ['hello', 'hi', 'hey']):
+        if analysis_results:
+            portfolio = analysis_results['portfolio']
+            health_score = analysis_results['health_metrics'].overall_score
+            return f"""👋 Hello! I can see you've analyzed your portfolio with {len(portfolio)} positions.
+
+**Your Portfolio Analysis Summary:**
+• **Health Score**: {health_score:.1f}/100 ({analysis_results['health_metrics'].health_level})
+• **Holdings**: {', '.join(portfolio.keys())}
+• **Risk Level**: {'Low' if health_score >= 75 else 'Moderate' if health_score >= 60 else 'High'}
+
+🚀 **What would you like to know about your results?**
+• "How risky is my portfolio?" - Detailed risk breakdown
+• "What's my health score mean?" - Health analysis explanation
+• "Should I optimize?" - Optimization recommendations
+
+What specific aspect interests you?"""
+        else:
+            return """👋 Hello! I'm your Portfolio AI Assistant.
+
+**To get personalized insights:**
+1. Enter your portfolio in the main section above
+2. Click "🚀 Analyze Portfolio"
+3. Then I can give you specific advice about YOUR results!
+
+**What would you like to know about portfolio management?**"""
+    
+    elif any(word in message_lower for word in ['risky', 'risk', 'dangerous']):
+        if analysis_results:
+            risk_metrics = analysis_results['risk_metrics']
+            portfolio = analysis_results['portfolio']
+            portfolio_value = analysis_results['portfolio_value']
+            
+            var_95 = risk_metrics['var_95']
+            volatility = risk_metrics['volatility']
+            max_drawdown = risk_metrics['max_drawdown']
+            var_dollar = abs(var_95) * portfolio_value
+            
+            return f"""📊 **Your Portfolio Risk Analysis**
+
+**Your {', '.join(portfolio.keys())} Portfolio Risk Summary:**
+
+🎯 **Daily Risk Metrics:**
+• **Value at Risk (95%)**: ${var_dollar:,.0f} potential loss on bad days ({abs(var_95):.1%} daily)
+• **Annual Volatility**: {volatility:.1%} - {'High' if volatility > 0.25 else 'Moderate' if volatility > 0.15 else 'Low'} volatility level
+• **Maximum Drawdown**: {abs(max_drawdown):.1%} worst historical decline
+
+**🔍 Risk Assessment for Your Portfolio:**
+{'Your portfolio shows well-managed risk levels with good diversification.' if volatility < 0.20 else 'Your portfolio has moderate risk - consider if this matches your risk tolerance.' if volatility < 0.25 else 'Your portfolio has higher volatility - ensure you can handle daily swings.'}
+
+**💡 Your Portfolio-Specific Recommendations:**
+• Monitor the ${var_dollar:,.0f} daily VaR - this is what you could lose on bad days
+• Your {volatility:.1%} volatility means expect daily swings of ±{volatility/16:.1%}
+• Consider if {abs(max_drawdown):.1%} drawdown risk fits your comfort level
+
+**Want specific strategies to reduce your risk?**"""
+        else:
+            return """📊 **Portfolio Risk Analysis Guide**
+
+I'd love to analyze YOUR specific risk, but I need to see your portfolio analysis first!
+
+**To get your personalized risk assessment:**
+1. Use the portfolio input section above
+2. Click "🚀 Analyze Portfolio"  
+3. Then ask me again for your specific risk breakdown
+
+**I'll then tell you exactly:**
+• Your daily Value at Risk in dollars
+• Your portfolio's volatility level
+• Your maximum drawdown risk
+• Specific recommendations for YOUR holdings
+
+**What portfolio would you like me to analyze?**"""
+    
+    elif any(word in message_lower for word in ['optimize', 'improve', 'better']):
+        if analysis_results:
+            portfolio = analysis_results['portfolio']
+            health_score = analysis_results['health_metrics'].overall_score
+            risk_metrics = analysis_results['risk_metrics']
+            
+            return f"""🎯 **Optimization Analysis for Your Portfolio**
+
+**Your {', '.join(portfolio.keys())} Portfolio Optimization Insights:**
+
+**Current Performance Assessment:**
+• **Health Score**: {health_score:.1f}/100 - {'Excellent' if health_score >= 80 else 'Good' if health_score >= 70 else 'Room for improvement'}
+• **Risk Level**: {risk_metrics['volatility']:.1%} annual volatility
+• **Diversification**: {len(portfolio)} positions with {max(portfolio.values()):.1%} max allocation
+
+**🎯 Optimization Opportunities for YOUR Portfolio:**
+{'Your portfolio is well-optimized! Minor tweaks could still help.' if health_score >= 80 else 'Good structure with optimization potential.' if health_score >= 70 else 'Significant optimization opportunities available.'}
+
+**Specific Recommendations for Your Holdings:**
+• **Use the optimization section above** to see exact rebalancing for your {', '.join(portfolio.keys())} holdings
+• **Expected improvements**: Better Sharpe ratio and potentially lower risk
+• **Implementation**: Gradual rebalancing over 2-4 weeks
+
+**Ready to optimize? Use the Portfolio Optimization section above to see your specific allocation improvements!**"""
+        else:
+            return """🎯 **Portfolio Optimization Guide**
+
+I'd love to give you specific optimization advice for YOUR portfolio!
+
+**To get personalized optimization recommendations:**
+1. Analyze your portfolio using the section above
+2. Then ask me about optimization opportunities
+3. I'll give you specific advice for YOUR holdings
+
+**I'll then show you exactly:**
+• Which positions to increase/decrease
+• Expected return improvements
+• Risk reduction opportunities  
+• Implementation timeline
+
+**What portfolio would you like me to optimize?**"""
+    
+    elif any(word in message_lower for word in ['health', 'healthy']):
+        if analysis_results:
+            health_metrics = analysis_results['health_metrics']
+            portfolio = analysis_results['portfolio']
+            
+            return f"""🏥 **Your Portfolio Health Analysis**
+
+**Your {', '.join(portfolio.keys())} Portfolio Health Report:**
+
+**📊 Overall Health Score: {health_metrics.overall_score:.1f}/100 ({health_metrics.health_level})**
+
+**🔍 Your Health Component Breakdown:**
+• **Concentration Risk**: {health_metrics.concentration_risk:.0f}/100 (Lower is better)
+• **Diversification**: {health_metrics.diversification_score:.0f}/100  
+• **Correlation Health**: {health_metrics.correlation_score:.0f}/100
+• **Regime Fitness**: {health_metrics.regime_fitness_score:.0f}/100
+• **Factor Balance**: {health_metrics.factor_balance_score:.0f}/100
+
+**⚠️ Your Key Risk Areas:**
+{chr(10).join(f"• {risk}" for risk in health_metrics.key_risks[:2])}
+
+**💡 Your Specific Improvement Actions:**
+{chr(10).join(f"• {rec}" for rec in health_metrics.recommendations[:2])}
+
+**🎯 Bottom Line for Your Portfolio:**
+{'Excellent health - maintain your current approach!' if health_metrics.overall_score >= 80 else 'Good foundation with room for optimization.' if health_metrics.overall_score >= 70 else 'Several improvement opportunities identified.'}
+
+**Want specific steps to improve your health score?**"""
+        else:
+            return """🏥 **Portfolio Health Assessment**
+
+I'd love to analyze YOUR portfolio health specifically!
+
+**To get your personalized health report:**
+1. Run your portfolio analysis above first
+2. Then ask me about your health score
+3. I'll break down your specific health metrics
+
+**I'll show you exactly:**
+• Your health score out of 100
+• Which health areas need work
+• Specific steps to improve YOUR portfolio
+
+**What portfolio would you like me to assess?**"""
+    
+    else:
+        if analysis_results:
+            portfolio = analysis_results['portfolio']
+            health_score = analysis_results['health_metrics'].overall_score
+            return f"""🤖 **AI Analysis of Your Portfolio**
+
+I can see you've analyzed your **{', '.join(portfolio.keys())} portfolio** with a **{health_score:.1f}/100 health score**.
+
+**I can help you understand:**
+📊 **"How risky is my portfolio?"** - Your specific risk breakdown with VaR and volatility  
+🏥 **"What does my health score mean?"** - Detailed health component analysis  
+🎯 **"Should I optimize my portfolio?"** - Specific rebalancing opportunities  
+🔥 **"How would my portfolio handle a crash?"** - Your stress test results explained
+
+**What specific aspect of your {', '.join(portfolio.keys())} portfolio analysis would you like me to explain?**"""
+        else:
+            return """🤖 **AI Portfolio Assistant**
+
+I specialize in analyzing YOUR specific portfolio! 
+
+**To get personalized insights:**
+1. Use the portfolio input section above
+2. Click "🚀 Analyze Portfolio"  
+3. Then ask me specific questions about YOUR results
+
+**I'll give you detailed analysis of:**
+• YOUR risk levels and what they mean
+• YOUR health score breakdown
+• YOUR optimization opportunities  
+• YOUR stress test implications
+
+**What portfolio would you like me to analyze?**"""
+
+# Process message when submitted
+if user_message:
+    with st.spinner("🧠 AI Assistant thinking..."):
+        # Get AI response
+        ai_response = get_ai_response(user_message)
+        
+        # Add to conversation history
+        st.session_state.conversation_history.append({
+            'user': user_message,
+            'ai': ai_response,
+            'timestamp': datetime.now()
+        })
+
+# Display conversation history
+if st.session_state.conversation_history:
+    st.markdown("### 💬 Conversation History")
+    
+    # Show conversations in reverse order (most recent first)
+    for i, conv in enumerate(reversed(st.session_state.conversation_history[-3:])):  # Show last 3
+        
+        # User message
+        st.markdown(f"""
+        <div style='background-color: #f0f2f6; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+            <strong>👤 You:</strong> {conv['user']}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # AI response  
+        st.markdown(f"""
+        <div style='background-color: #e8f4f8; padding: 15px; border-radius: 10px; margin: 5px 0;'>
+            <strong>🤖 AI Assistant:</strong><br>{conv['ai']}
+        </div>
+        """, unsafe_allow_html=True)
+
+# Quick action buttons
+st.markdown("### 🚀 Quick Actions")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("📊 How Risky?", use_container_width=True):
+        ai_response = get_ai_response("How risky is my portfolio?")
+        st.session_state.conversation_history.append({
+            'user': "How risky is my portfolio?",
+            'ai': ai_response,
+            'timestamp': datetime.now()
+        })
+        st.rerun()
+
+with col2:
+    if st.button("🎯 Optimization Help", use_container_width=True):
+        ai_response = get_ai_response("How does portfolio optimization work?")
+        st.session_state.conversation_history.append({
+            'user': "How does portfolio optimization work?",
+            'ai': ai_response,
+            'timestamp': datetime.now()
+        })
+        st.rerun()
+
+with col3:
+    if st.button("🏥 Health Guide", use_container_width=True):
+        ai_response = get_ai_response("What makes a portfolio healthy?")
+        st.session_state.conversation_history.append({
+            'user': "What makes a portfolio healthy?", 
+            'ai': ai_response,
+            'timestamp': datetime.now()
+        })
+        st.rerun()
+
+# Clear conversation button
+if st.session_state.conversation_history:
+    if st.button("🗑️ Clear Conversation", type="secondary"):
+        st.session_state.conversation_history = []
+        st.rerun()
+
+    # Sync portfolio to AI agent helper function
+    def sync_portfolio_to_ai_agent(analyzer, portfolio, portfolio_value):
+        """Sync current portfolio to AI agent context"""
+        try:
+            user_id = st.session_state.user_id
+            if hasattr(analyzer, 'ai_agent') and user_id in analyzer.ai_agent.user_contexts:
+                context = analyzer.ai_agent.user_contexts[user_id]
+                context.portfolio = portfolio
+                context.portfolio_value = portfolio_value
+            return True
+        except Exception as e:
+            st.error(f"Failed to sync portfolio: {e}")
+            return False
+
+    # Call this when portfolio is updated (add this where you update your portfolio variable)
+    #if 'portfolio' in locals() and portfolio:  # Check if portfolio exists
+        #sync_portfolio_to_ai_agent(analyzer, portfolio, portfolio_value)
+
+        #display_portfolio_optimization_section(results, analyzer)
 
      
-
-if __name__ == "__main__":
-    main()
