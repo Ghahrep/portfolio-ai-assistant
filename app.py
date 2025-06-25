@@ -302,18 +302,23 @@ class SimpleAIAssistant:
         try:
             health_metrics = data.get('health_metrics')
             
-            if hasattr(health_metrics, 'overall_score'):
+            # Handle both dataclass and dictionary formats safely
+            if health_metrics and hasattr(health_metrics, 'overall_score'):
                 # health_metrics is a HealthMetrics dataclass
                 score = health_metrics.overall_score
                 level = health_metrics.health_level
+            elif health_metrics and isinstance(health_metrics, dict):
+                # health_metrics is a dictionary
+                score = health_metrics.get('overall_score', 65)
+                level = health_metrics.get('health_level', 'Fair')
             else:
-                # health_metrics is a dictionary (fallback)
-                score = health_metrics.get('overall_score', 65) if health_metrics else 65
-                level = health_metrics.get('health_level', 'Fair') if health_metrics else 'Fair'
+                # Fallback values
+                score = 65
+                level = 'Fair'
             
             return f"Your portfolio health score is {score:.0f}/100 ({level}). This reflects how well-diversified and balanced your holdings are. {'Great job!' if score > 80 else 'Some room for improvement.' if score > 60 else 'Consider rebalancing for better health.'}"
         
-        except Exception:
+        except Exception as e:
             return "Your portfolio health score reflects how well-diversified your holdings are. A higher score indicates better balance and lower concentration risk. Consider diversifying if you have large positions in single stocks."
     
     def _explain_stress_test(self, data: Dict) -> str:
@@ -321,16 +326,26 @@ class SimpleAIAssistant:
         try:
             stress_tests = data.get('stress_tests', {})
             
-            if stress_tests:
-                worst_scenario = min(stress_tests.items(), key=lambda x: x[1].get('loss_percentage', 0))
-                scenario_name, scenario_data = worst_scenario
-                loss_pct = abs(scenario_data.get('loss_percentage', 0.15))
+            if stress_tests and isinstance(stress_tests, dict):
+                # Find the scenario with the highest loss
+                max_loss = 0
+                worst_scenario_name = "market stress"
                 
-                return f"In a {scenario_name.lower().replace('_', ' ')}, your portfolio could lose around {loss_pct:.1%}. This is based on how similar portfolios performed during past crises."
+                for scenario_name, scenario_data in stress_tests.items():
+                    if isinstance(scenario_data, dict):
+                        loss_pct = abs(scenario_data.get('loss_percentage', 0))
+                        if loss_pct > max_loss:
+                            max_loss = loss_pct
+                            worst_scenario_name = scenario_name.replace('_', ' ').lower()
+                
+                if max_loss > 0:
+                    return f"In a {worst_scenario_name}, your portfolio could lose around {max_loss:.1%}. This is based on how similar portfolios performed during past crises."
+                else:
+                    return "Stress testing shows your portfolio could face losses during market crises. More concentrated portfolios typically see larger losses than diversified ones."
             else:
-                return "Stress testing shows how your portfolio might perform during market crises. Generally, more diversified portfolios handle stress better."
+                return "During market stress, your portfolio could see significant losses depending on its concentration and diversification. More balanced portfolios typically weather crises better."
         
-        except Exception:
+        except Exception as e:
             return "During market stress, your portfolio could see significant losses depending on its concentration and diversification. More balanced portfolios typically weather crises better."
     
     def _suggest_improvements(self, data: Dict) -> str:
@@ -339,12 +354,19 @@ class SimpleAIAssistant:
             health_metrics = data.get('health_metrics')
             portfolio = data.get('portfolio', {})
             
-            if hasattr(health_metrics, 'recommendations'):
+            # Handle both dataclass and dictionary formats
+            if health_metrics and hasattr(health_metrics, 'recommendations'):
                 # health_metrics is a HealthMetrics dataclass
                 recommendations = health_metrics.recommendations
+                score = health_metrics.overall_score
+            elif health_metrics and isinstance(health_metrics, dict):
+                # health_metrics is a dictionary
+                recommendations = health_metrics.get('recommendations', [])
+                score = health_metrics.get('overall_score', 65)
             else:
-                # health_metrics is a dictionary (fallback)
-                recommendations = health_metrics.get('recommendations', []) if health_metrics else []
+                # No health metrics available, generate basic recommendations
+                recommendations = []
+                score = 65
             
             if recommendations:
                 return f"To improve your portfolio: {recommendations[0]}. This would help reduce concentration risk and improve diversification."
@@ -361,7 +383,7 @@ class SimpleAIAssistant:
                 else:
                     return "Consider diversifying across different sectors, asset classes, and geographic regions for better risk management."
         
-        except Exception:
+        except Exception as e:
             return "To improve your portfolio, consider reducing concentration in large positions and adding diversification across different sectors or asset types like bonds, REITs, or international stocks."
     
     def _general_response(self, data: Dict) -> str:
@@ -678,23 +700,35 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     
     with col1:
         if st.button("💡 Why is my portfolio risky?", key="risky_btn", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("Why is my portfolio risky?", results)
+            try:
+                response = analyzer.ai_assistant.process_question("Why is my portfolio risky?", results)
+            except Exception:
+                response = "Your portfolio shows some concentration that could increase risk during market volatility. The main drivers are typically large positions in similar types of investments that tend to move together."
             st.session_state.chat_history.append(("Why is my portfolio risky?", response))
             st.rerun()
         
         if st.button("🏥 Explain my health score", key="health_btn", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("Explain my health score", results)
+            try:
+                response = analyzer.ai_assistant.process_question("Explain my health score", results)
+            except Exception:
+                response = "Your portfolio health score reflects how well-diversified your holdings are. A higher score indicates better balance and lower concentration risk."
             st.session_state.chat_history.append(("Explain my health score", response))
             st.rerun()
     
     with col2:
         if st.button("💥 What if markets crash?", key="crash_btn", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("What if markets crash?", results)
+            try:
+                response = analyzer.ai_assistant.process_question("What if markets crash?", results)
+            except Exception:
+                response = "During market stress, your portfolio could see significant losses depending on its concentration and diversification. More balanced portfolios typically weather crises better."
             st.session_state.chat_history.append(("What if markets crash?", response))
             st.rerun()
         
         if st.button("🛠️ How can I improve?", key="improve_btn", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("How can I improve?", results)
+            try:
+                response = analyzer.ai_assistant.process_question("How can I improve?", results)
+            except Exception:
+                response = "To improve your portfolio, consider reducing concentration in large positions and adding diversification across different sectors or asset types like bonds, REITs, or international stocks."
             st.session_state.chat_history.append(("How can I improve?", response))
             st.rerun()
     
@@ -702,7 +736,10 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     with st.expander("💬 Ask a Custom Question"):
         custom_question = st.text_input("Your question:", placeholder="Ask about your portfolio...")
         if st.button("Ask AI", key="custom_ai_btn") and custom_question:
-            response = analyzer.ai_assistant.process_question(custom_question, results)
+            try:
+                response = analyzer.ai_assistant.process_question(custom_question, results)
+            except Exception:
+                response = "I can help explain your portfolio's risk characteristics, health score, or suggest improvements. What specific aspect interests you?"
             st.session_state.chat_history.append((custom_question, response))
             st.rerun()
     
