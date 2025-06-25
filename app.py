@@ -69,6 +69,155 @@ class RobustDataProvider:
             if not ticker or len(ticker) > 5 or not ticker.isalpha():
                 raise ValueError(f"Invalid ticker format: {ticker}")
 
+# Add this to the TOP of your app.py (after imports)
+import numpy as np
+from typing import Dict, List
+from dataclasses import dataclass
+
+@dataclass
+class PortfolioHealthMetrics:
+    """Simple portfolio health assessment"""
+    overall_score: float  # 0-100
+    concentration_risk: float  # 0-100
+    correlation_health: float  # 0-100
+    stress_resilience: float  # 0-100
+    
+    health_level: str  # "Excellent", "Good", "Fair", "Poor"
+    key_risks: List[str]
+    improvement_tips: List[str]
+
+class SimpleHealthMonitor:
+    """Simplified health monitor for safe integration"""
+    
+    def calculate_health_score(self, portfolio_dict: Dict[str, float], 
+                             portfolio_data: pd.DataFrame = None) -> PortfolioHealthMetrics:
+        """Calculate basic health metrics safely"""
+        
+        # 1. Concentration Risk (existing logic you already have)
+        concentration_score = self._assess_concentration(portfolio_dict)
+        
+        # 2. Correlation Health (if you have the data)
+        correlation_score = self._assess_correlations(portfolio_data) if portfolio_data is not None else 70
+        
+        # 3. Stress Resilience (placeholder for now)
+        stress_score = 75  # Default until we integrate with your stress tests
+        
+        # Overall score (weighted average)
+        overall_score = (
+            concentration_score * 0.4 + 
+            correlation_score * 0.3 + 
+            stress_score * 0.3
+        )
+        
+        # Determine health level
+        if overall_score >= 80:
+            health_level = "Excellent"
+        elif overall_score >= 65:
+            health_level = "Good"
+        elif overall_score >= 50:
+            health_level = "Fair"
+        else:
+            health_level = "Poor"
+        
+        # Generate insights
+        risks = self._identify_risks(portfolio_dict, concentration_score, correlation_score)
+        tips = self._generate_tips(concentration_score, correlation_score)
+        
+        return PortfolioHealthMetrics(
+            overall_score=overall_score,
+            concentration_risk=concentration_score,
+            correlation_health=correlation_score,
+            stress_resilience=stress_score,
+            health_level=health_level,
+            key_risks=risks,
+            improvement_tips=tips
+        )
+    
+    def _assess_concentration(self, portfolio: Dict[str, float]) -> float:
+        """Assess concentration risk"""
+        if not portfolio:
+            return 0
+        
+        max_weight = max(portfolio.values())
+        num_positions = len(portfolio)
+        
+        # Score based on max position size and number of holdings
+        if max_weight <= 0.20:  # 20% or less
+            base_score = 90
+        elif max_weight <= 0.30:  # 20-30%
+            base_score = 75
+        elif max_weight <= 0.50:  # 30-50%
+            base_score = 60
+        else:  # >50%
+            base_score = 30
+        
+        # Bonus for more positions
+        diversification_bonus = min(15, (num_positions - 1) * 3)
+        
+        return min(100, base_score + diversification_bonus)
+    
+    def _assess_correlations(self, data: pd.DataFrame) -> float:
+        """Simple correlation assessment"""
+        if data is None or len(data.columns) < 2:
+            return 70  # Neutral score
+        
+        try:
+            corr_matrix = data.corr()
+            # Get average correlation (excluding diagonal)
+            mask = ~np.eye(len(corr_matrix), dtype=bool)
+            avg_corr = corr_matrix.values[mask].mean()
+            
+            # Score based on average correlation
+            if avg_corr < 0.3:
+                return 85  # Low correlation is good
+            elif avg_corr < 0.5:
+                return 75
+            elif avg_corr < 0.7:
+                return 60
+            else:
+                return 40  # High correlation is bad
+                
+        except Exception:
+            return 70  # Fallback score
+    
+    def _identify_risks(self, portfolio: Dict[str, float], 
+                       concentration_score: float, correlation_score: float) -> List[str]:
+        """Identify key portfolio risks"""
+        risks = []
+        
+        max_weight = max(portfolio.values()) if portfolio else 0
+        
+        if concentration_score < 60:
+            if max_weight > 0.4:
+                risks.append(f"High concentration: {max_weight:.0%} in single position")
+            else:
+                risks.append("Limited diversification across holdings")
+        
+        if correlation_score < 60:
+            risks.append("High correlation between holdings reduces diversification benefits")
+        
+        if len(portfolio) < 4:
+            risks.append("Portfolio may benefit from additional positions")
+        
+        return risks[:3]  # Max 3 risks
+    
+    def _generate_tips(self, concentration_score: float, correlation_score: float) -> List[str]:
+        """Generate improvement tips"""
+        tips = []
+        
+        if concentration_score < 70:
+            tips.append("Consider reducing largest position sizes")
+            tips.append("Add more holdings to improve diversification")
+        
+        if correlation_score < 70:
+            tips.append("Consider adding assets from different sectors or asset classes")
+        
+        if len(tips) == 0:
+            tips.append("Portfolio shows good diversification characteristics")
+            tips.append("Continue monitoring concentration and correlations")
+        
+        return tips[:3]  # Max 3 tips
+
 # ============================================================================
 # PORTFOLIO HEALTH MONITOR - SIMPLIFIED
 # ============================================================================
@@ -390,6 +539,9 @@ class SimpleAIAssistant:
         """General response for other questions"""
         return "I can help explain your portfolio's risk level, health score, stress test results, or suggest improvements. What specific aspect interests you most?"
 
+
+if st.checkbox("🧬 Enable Portfolio Health Monitoring (Beta)", value=False):
+    display_portfolio_health_section(portfolio_dict, data)
 # ============================================================================
 # MAIN PORTFOLIO ANALYZER
 # ============================================================================
