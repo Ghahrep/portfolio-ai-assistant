@@ -16,8 +16,260 @@ import re
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
+from scipy.optimize import minimize
 import warnings
 warnings.filterwarnings('ignore')
+
+@dataclass
+class OptimizationResults:
+    """Results from portfolio optimization"""
+    current_allocation: Dict[str, float]
+    optimized_allocation: Dict[str, float]
+    current_metrics: Dict[str, float]
+    optimized_metrics: Dict[str, float]
+    improvement_summary: Dict[str, float]
+    rebalancing_trades: List[Dict[str, str]]
+    implementation_plan: List[str]
+    optimization_type: str
+
+class PortfolioOptimizer:
+    """Advanced portfolio optimization engine"""
+    
+    def __init__(self):
+        self.risk_free_rate = 0.02  # 2% risk-free rate
+        
+    def optimize_portfolio(self, portfolio: Dict[str, float], 
+                          market_data: pd.DataFrame,
+                          optimization_type: str = "max_sharpe") -> OptimizationResults:
+        """
+        Optimize portfolio allocation using real market data
+        """
+        
+        tickers = list(portfolio.keys())
+        current_weights = np.array(list(portfolio.values()))
+        
+        # Calculate returns and covariance from real market data
+        returns = market_data.pct_change().dropna()
+        mean_returns = returns.mean() * 252  # Annualized returns
+        cov_matrix = returns.cov() * 252     # Annualized covariance
+        
+        # Current portfolio metrics
+        current_metrics = self._calculate_portfolio_metrics(
+            current_weights, mean_returns, cov_matrix
+        )
+        
+        # Optimize based on objective
+        if optimization_type == "max_sharpe":
+            optimized_weights = self._maximize_sharpe_ratio(mean_returns, cov_matrix)
+        elif optimization_type == "min_risk":
+            optimized_weights = self._minimize_risk(mean_returns, cov_matrix)
+        elif optimization_type == "max_return":
+            optimized_weights = self._maximize_return(mean_returns, cov_matrix, 
+                                                    current_metrics['volatility'])
+        else:
+            optimized_weights = current_weights  # Fallback
+        
+        # Optimized portfolio metrics
+        optimized_metrics = self._calculate_portfolio_metrics(
+            optimized_weights, mean_returns, cov_matrix
+        )
+        
+        # Create optimized allocation dictionary
+        optimized_allocation = dict(zip(tickers, optimized_weights))
+        
+        # Calculate improvements
+        improvement_summary = {
+            'return_improvement': optimized_metrics['return'] - current_metrics['return'],
+            'risk_reduction': current_metrics['volatility'] - optimized_metrics['volatility'],
+            'sharpe_improvement': optimized_metrics['sharpe'] - current_metrics['sharpe'],
+            'total_rebalancing': sum(abs(optimized_weights[i] - current_weights[i]) 
+                                   for i in range(len(tickers)))
+        }
+        
+        # Generate rebalancing trades
+        rebalancing_trades = self._generate_rebalancing_trades(
+            portfolio, optimized_allocation
+        )
+        
+        # Implementation plan
+        implementation_plan = self._generate_implementation_plan(
+            improvement_summary, rebalancing_trades, optimization_type
+        )
+        
+        return OptimizationResults(
+            current_allocation=portfolio,
+            optimized_allocation=optimized_allocation,
+            current_metrics=current_metrics,
+            optimized_metrics=optimized_metrics,
+            improvement_summary=improvement_summary,
+            rebalancing_trades=rebalancing_trades,
+            implementation_plan=implementation_plan,
+            optimization_type=optimization_type
+        )
+    
+    def _calculate_portfolio_metrics(self, weights: np.ndarray, 
+                                   mean_returns: pd.Series, 
+                                   cov_matrix: pd.DataFrame) -> Dict[str, float]:
+        """Calculate portfolio return, risk, and Sharpe ratio"""
+        
+        portfolio_return = np.sum(mean_returns * weights)
+        portfolio_variance = np.dot(weights.T, np.dot(cov_matrix, weights))
+        portfolio_volatility = np.sqrt(portfolio_variance)
+        sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_volatility
+        
+        return {
+            'return': portfolio_return,
+            'volatility': portfolio_volatility,
+            'sharpe': sharpe_ratio,
+            'variance': portfolio_variance
+        }
+    
+    def _maximize_sharpe_ratio(self, mean_returns: pd.Series, 
+                             cov_matrix: pd.DataFrame) -> np.ndarray:
+        """Find portfolio that maximizes Sharpe ratio"""
+        
+        n_assets = len(mean_returns)
+        
+        def negative_sharpe(weights):
+            portfolio_return = np.sum(mean_returns * weights)
+            portfolio_variance = np.dot(weights.T, np.dot(cov_matrix, weights))
+            portfolio_volatility = np.sqrt(portfolio_variance)
+            sharpe = (portfolio_return - self.risk_free_rate) / portfolio_volatility
+            return -sharpe  # Minimize negative Sharpe = maximize Sharpe
+        
+        # Constraints: weights sum to 1, all weights positive
+        constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+        bounds = tuple((0.05, 0.5) for _ in range(n_assets))  # 5% min, 50% max
+        
+        # Start with equal weights
+        initial_guess = np.array([1/n_assets] * n_assets)
+        
+        try:
+            result = minimize(negative_sharpe, initial_guess, method='SLSQP',
+                            bounds=bounds, constraints=constraints)
+            
+            if result.success:
+                return result.x
+            else:
+                return initial_guess
+        except:
+            return initial_guess
+    
+    def _minimize_risk(self, mean_returns: pd.Series, 
+                      cov_matrix: pd.DataFrame) -> np.ndarray:
+        """Find minimum variance portfolio"""
+        
+        n_assets = len(mean_returns)
+        
+        def portfolio_variance(weights):
+            return np.dot(weights.T, np.dot(cov_matrix, weights))
+        
+        constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+        bounds = tuple((0.05, 0.5) for _ in range(n_assets))
+        initial_guess = np.array([1/n_assets] * n_assets)
+        
+        try:
+            result = minimize(portfolio_variance, initial_guess, method='SLSQP',
+                            bounds=bounds, constraints=constraints)
+            
+            if result.success:
+                return result.x
+            else:
+                return initial_guess
+        except:
+            return initial_guess
+    
+    def _maximize_return(self, mean_returns: pd.Series, cov_matrix: pd.DataFrame,
+                        target_volatility: float) -> np.ndarray:
+        """Maximize return for given risk level"""
+        
+        n_assets = len(mean_returns)
+        
+        def negative_return(weights):
+            return -np.sum(mean_returns * weights)
+        
+        def volatility_constraint(weights):
+            portfolio_variance = np.dot(weights.T, np.dot(cov_matrix, weights))
+            return target_volatility - np.sqrt(portfolio_variance)
+        
+        constraints = [
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1},
+            {'type': 'eq', 'fun': volatility_constraint}
+        ]
+        bounds = tuple((0.05, 0.5) for _ in range(n_assets))
+        initial_guess = np.array([1/n_assets] * n_assets)
+        
+        try:
+            result = minimize(negative_return, initial_guess, method='SLSQP',
+                            bounds=bounds, constraints=constraints)
+            
+            if result.success:
+                return result.x
+            else:
+                return self._maximize_sharpe_ratio(mean_returns, cov_matrix)
+        except:
+            return self._maximize_sharpe_ratio(mean_returns, cov_matrix)
+    
+    def _generate_rebalancing_trades(self, current: Dict[str, float], 
+                                   optimized: Dict[str, float]) -> List[Dict[str, str]]:
+        """Generate specific rebalancing trades"""
+        
+        trades = []
+        
+        for ticker in current.keys():
+            current_weight = current[ticker]
+            optimized_weight = optimized[ticker]
+            difference = optimized_weight - current_weight
+            
+            if abs(difference) > 0.01:  # Only show trades > 1%
+                action = "BUY" if difference > 0 else "SELL"
+                trades.append({
+                    'ticker': ticker,
+                    'action': action,
+                    'current_weight': f"{current_weight:.1%}",
+                    'target_weight': f"{optimized_weight:.1%}",
+                    'change': f"{difference:+.1%}",
+                    'change_abs': abs(difference)
+                })
+        
+        # Sort by largest changes first
+        trades.sort(key=lambda x: x['change_abs'], reverse=True)
+        
+        return trades
+    
+    def _generate_implementation_plan(self, improvements: Dict[str, float],
+                                    trades: List[Dict[str, str]], 
+                                    optimization_type: str) -> List[str]:
+        """Generate step-by-step implementation plan"""
+        
+        plan = []
+        
+        # Add optimization summary
+        if optimization_type == "max_sharpe":
+            plan.append("🎯 Maximum Sharpe Ratio optimization completed")
+        elif optimization_type == "min_risk":
+            plan.append("🛡️ Minimum risk optimization completed")
+        elif optimization_type == "max_return":
+            plan.append("📈 Maximum return optimization completed")
+        
+        # Add key improvements
+        if improvements['return_improvement'] > 0.005:
+            plan.append(f"📈 Expected return improvement: +{improvements['return_improvement']:.1%} annually")
+        
+        if improvements['risk_reduction'] > 0.005:
+            plan.append(f"🛡️ Risk reduction achieved: -{improvements['risk_reduction']:.1%} volatility")
+        
+        if improvements['sharpe_improvement'] > 0.1:
+            plan.append(f"⚡ Sharpe ratio improvement: +{improvements['sharpe_improvement']:.2f}")
+        
+        # Add implementation steps
+        plan.append("🔄 Implementation recommended over 2-4 weeks")
+        plan.append("📊 Monitor rebalanced portfolio performance monthly")
+        
+        if len(trades) > 3:
+            plan.append("⚖️ Consider implementing largest changes first")
+        
+        return plan
 
 # ============================================================================
 # CORE DATA PROVIDER - SIMPLIFIED
@@ -68,8 +320,7 @@ class RobustDataProvider:
         for ticker in tickers:
             if not ticker or len(ticker) > 5 or not ticker.isalpha():
                 raise ValueError(f"Invalid ticker format: {ticker}")
-
-
+            
 
 # ============================================================================
 # PORTFOLIO HEALTH MONITOR - SIMPLIFIED
@@ -609,6 +860,7 @@ class MVPPortfolioAnalyzer:
         self.health_monitor = PortfolioHealthMonitor()
         self.risk_calculator = RiskCalculator()
         self.ai_assistant = SimpleAIAssistant()
+        self.optimizer = PortfolioOptimizer()
     
     def analyze_portfolio(self, portfolio: Dict[str, float], portfolio_value: float = 1000000) -> Dict:
         """Complete portfolio analysis"""
@@ -664,6 +916,181 @@ class MVPPortfolioAnalyzer:
                 return {ticker: weight for ticker in tickers}
         
         return None
+    
+    def optimize_portfolio_allocation(self, portfolio: Dict[str, float], 
+                                   market_data: pd.DataFrame,
+                                   optimization_type: str = "max_sharpe") -> OptimizationResults:
+        """Add optimization capability to your analyzer"""
+        
+        return self.optimizer.optimize_portfolio(portfolio, market_data, optimization_type)
+    
+
+def display_portfolio_optimization_section(results: Dict, analyzer: MVPPortfolioAnalyzer):
+    """Portfolio optimization section"""
+
+    portfolio = results['portfolio']
+    market_data = results['market_data']
+
+    st.markdown("---")
+    st.markdown("### 🎯 Portfolio Optimization")
+
+    # Optimization controls
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.write("**Optimize your portfolio allocation for better risk-adjusted returns**")
+        
+        optimization_type = st.selectbox(
+            "Optimization Objective:",
+            ["max_sharpe", "min_risk", "max_return"],
+            format_func=lambda x: {
+                "max_sharpe": "🎯 Maximize Sharpe Ratio (Best Risk-Adjusted Returns)",
+                "min_risk": "🛡️ Minimize Risk (Lowest Volatility)", 
+                "max_return": "📈 Maximize Return (Target Current Risk Level)"
+            }[x],
+            help="Choose your optimization objective based on your investment goals"
+        )
+
+    with col2:
+        run_optimization = st.button(
+            "🚀 Optimize Portfolio", 
+            type="primary",
+            use_container_width=True,
+            help="Run optimization algorithm on your portfolio"
+        )
+
+    # Run optimization when button clicked
+    if run_optimization:
+        try:
+            with st.spinner("🔄 Running portfolio optimization algorithms..."):
+                optimization_results = analyzer.optimize_portfolio_allocation(
+                    portfolio, market_data, optimization_type
+                )
+            
+            # Display optimization results
+            display_optimization_results(optimization_results)
+            
+        except Exception as e:
+            st.error(f"❌ Optimization failed: {str(e)}")
+            st.info("💡 This typically happens with insufficient market data. Please try with more liquid securities.")
+
+def display_optimization_results(opt_results: OptimizationResults):
+    """Display comprehensive optimization results"""
+
+    st.success("✅ Portfolio optimization completed!")
+
+    # Performance comparison
+    st.markdown("#### 📊 Performance Comparison")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        current_return = opt_results.current_metrics['return']
+        optimized_return = opt_results.optimized_metrics['return']
+        return_improvement = opt_results.improvement_summary['return_improvement']
+        
+        st.metric(
+            "Expected Annual Return",
+            f"{optimized_return:.1%}",
+            delta=f"{return_improvement:+.1%}",
+            help="Expected return based on historical data"
+        )
+
+    with col2:
+        current_risk = opt_results.current_metrics['volatility']
+        optimized_risk = opt_results.optimized_metrics['volatility']
+        risk_change = optimized_risk - current_risk
+        
+        st.metric(
+            "Portfolio Risk (Volatility)",
+            f"{optimized_risk:.1%}",
+            delta=f"{risk_change:+.1%}",
+            delta_color="inverse",  # Lower risk is better
+            help="Annual volatility (standard deviation of returns)"
+        )
+
+    with col3:
+        current_sharpe = opt_results.current_metrics['sharpe']
+        optimized_sharpe = opt_results.optimized_metrics['sharpe']
+        sharpe_improvement = opt_results.improvement_summary['sharpe_improvement']
+        
+        st.metric(
+            "Sharpe Ratio",
+            f"{optimized_sharpe:.2f}",
+            delta=f"{sharpe_improvement:+.2f}",
+            help="Risk-adjusted return measure (higher is better)"
+        )
+
+    # Allocation comparison chart
+    st.markdown("#### 🔄 Recommended Portfolio Changes")
+
+    # Create side-by-side allocation chart
+    tickers = list(opt_results.current_allocation.keys())
+    current_weights = [opt_results.current_allocation[ticker] for ticker in tickers]
+    optimized_weights = [opt_results.optimized_allocation[ticker] for ticker in tickers]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        name='Current Allocation',
+        x=tickers,
+        y=[w*100 for w in current_weights],
+        marker_color='lightblue',
+        text=[f"{w:.1%}" for w in current_weights],
+        textposition='auto'
+    ))
+
+    fig.add_trace(go.Bar(
+        name='Optimized Allocation',
+        x=tickers,
+        y=[w*100 for w in optimized_weights],
+        marker_color='darkgreen',
+        text=[f"{w:.1%}" for w in optimized_weights],
+        textposition='auto'
+    ))
+
+    fig.update_layout(
+        title="Current vs. Optimized Allocation",
+        xaxis_title="Securities",
+        yaxis_title="Allocation (%)",
+        barmode='group',
+        height=400
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Rebalancing trades
+    if opt_results.rebalancing_trades:
+        st.markdown("#### 📋 Rebalancing Actions Required")
+        
+        trades_df = pd.DataFrame(opt_results.rebalancing_trades)
+        trades_df = trades_df[['ticker', 'action', 'current_weight', 'target_weight', 'change']]
+        trades_df.columns = ['Security', 'Action', 'Current %', 'Target %', 'Change']
+        
+        st.dataframe(trades_df, use_container_width=True, hide_index=True)
+
+    # Implementation plan
+    st.markdown("#### 🛠️ Implementation Plan")
+
+    for step in opt_results.implementation_plan:
+        st.write(f"• {step}")
+
+    # Optimization insights
+    with st.expander("🔍 Optimization Insights", expanded=False):
+        st.write(f"**Optimization Type**: {opt_results.optimization_type.replace('_', ' ').title()}")
+        st.write(f"**Total Rebalancing Required**: {opt_results.improvement_summary['total_rebalancing']:.1%}")
+        
+        if opt_results.improvement_summary['return_improvement'] > 0.01:
+            st.success(f"🎯 **Significant Return Improvement**: +{opt_results.improvement_summary['return_improvement']:.1%} expected annual return")
+        
+        if opt_results.improvement_summary['risk_reduction'] > 0.01:
+            st.success(f"🛡️ **Risk Reduction Achieved**: -{opt_results.improvement_summary['risk_reduction']:.1%} volatility reduction")
+        
+        if opt_results.improvement_summary['sharpe_improvement'] > 0.2:
+            st.success(f"⚡ **Excellent Sharpe Improvement**: +{opt_results.improvement_summary['sharpe_improvement']:.2f} better risk-adjusted returns")
+
+        
+        
 
 # ============================================================================
 # STREAMLIT UI
@@ -1062,6 +1489,10 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
             st.markdown(f"**🙋 You:** {question}")
             st.markdown(f"**🤖 AI:** {answer}")
             st.markdown("---")
+
+    display_portfolio_optimization_section(results, analyzer)
+
+     
 
 if __name__ == "__main__":
     main()
