@@ -830,7 +830,7 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     # Portfolio health
     st.markdown("### 🏥 Enhanced Portfolio Health")
     
-    col1, col2, col3 = st.columns([2, 1, 1])
+    col1, col2, col3, col4= st.columns([2, 1, 1,1])
     
     with col1:
         # Enhanced health gauge
