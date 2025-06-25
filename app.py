@@ -1483,6 +1483,26 @@ def display_analysis_results(results: dict, analyzer):
 
     
     st.markdown("### 🎯 Portfolio Optimization")
+    st.write("🔍 **DEBUG**: Optimization section reached!")
+    
+    # Debug checks
+    try:
+        st.write(f"🔍 DEBUG: Portfolio keys: {list(portfolio.keys())}")
+        st.write(f"🔍 DEBUG: Results keys: {list(results.keys())}")
+        st.write(f"🔍 DEBUG: Analyzer type: {type(analyzer)}")
+        st.write(f"🔍 DEBUG: Has optimizer: {hasattr(analyzer, 'optimizer')}")
+        st.write(f"🔍 DEBUG: Has optimize_portfolio_allocation: {hasattr(analyzer, 'optimize_portfolio_allocation')}")
+        
+        # Test market data access
+        market_data = results['market_data']
+        st.write(f"🔍 DEBUG: Market data shape: {market_data.shape}")
+        st.success("✅ All optimization prerequisites checked successfully!")
+        
+    except Exception as debug_e:
+        st.error(f"🔍 DEBUG ERROR: {debug_e}")
+        st.write(f"Debug error type: {type(debug_e).__name__}")
+        import traceback
+        st.code(traceback.format_exc())
 
     # Optimization controls
     col1, col2 = st.columns([2, 1])
