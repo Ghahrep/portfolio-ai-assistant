@@ -601,21 +601,39 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     # Stress testing
     st.markdown("### 🔥 Stress Test Results")
     
-    scenarios = list(stress_tests.keys())
-    losses = [abs(data['loss_percentage']) * 100 for data in stress_tests.values()]
-    
-    fig_stress = go.Figure(data=[
-        go.Bar(x=scenarios, y=losses, 
-               text=[f"{loss:.1f}%" for loss in losses],
-               textposition='auto')
-    ])
-    fig_stress.update_layout(
-        title="Portfolio Loss in Crisis Scenarios (%)",
-        xaxis_title="Scenario",
-        yaxis_title="Loss (%)",
-        height=400
-    )
-    st.plotly_chart(fig_stress, use_container_width=True)
+    try:
+        scenarios = list(stress_tests.keys())
+        losses = [abs(data['loss_percentage']) * 100 for data in stress_tests.values()]
+        
+        fig_stress = go.Figure(data=[
+            go.Bar(x=scenarios, y=losses, 
+                   text=[f"{loss:.1f}%" for loss in losses],
+                   textposition='auto')
+        ])
+        fig_stress.update_layout(
+            title="Portfolio Loss in Crisis Scenarios (%)",
+            xaxis_title="Scenario",
+            yaxis_title="Loss (%)",
+            height=400
+        )
+        st.plotly_chart(fig_stress, use_container_width=True)
+        
+        # Stress test summary
+        st.markdown("**Crisis Scenario Summary:**")
+        for scenario, data in stress_tests.items():
+            loss_pct = abs(data['loss_percentage'])
+            loss_amount = data['loss_amount']
+            st.write(f"• **{scenario}**: {loss_pct:.1%} loss (${loss_amount:,.0f})")
+            
+    except Exception as e:
+        st.warning("Stress test visualization temporarily unavailable. Analysis results above are still valid.")
+        # Fallback display
+        if stress_tests:
+            st.markdown("**Crisis Scenario Summary:**")
+            for scenario, data in stress_tests.items():
+                st.write(f"• **{scenario}**: Potential significant losses during crisis")
+        else:
+            st.info("Stress testing will be available with next analysis update.")
     
     # AI Assistant
     st.markdown("### 🤖 AI Assistant")
@@ -623,29 +641,49 @@ def display_analysis_results(results: Dict, analyzer: MVPPortfolioAnalyzer):
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("💡 Why is my portfolio risky?", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("Why is my portfolio risky?", results)
-            st.session_state.chat_history.append(("Why is my portfolio risky?", response))
+        if st.button("💡 Why is my portfolio risky?", key="risky_btn", use_container_width=True):
+            try:
+                response = analyzer.ai_assistant.process_question("Why is my portfolio risky?", results)
+                st.session_state.chat_history.append(("Why is my portfolio risky?", response))
+                st.rerun()
+            except Exception as e:
+                st.error(f"AI response error: Please try again.")
         
-        if st.button("🏥 Explain my health score", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("Explain my health score", results)
-            st.session_state.chat_history.append(("Explain my health score", response))
+        if st.button("🏥 Explain my health score", key="health_btn", use_container_width=True):
+            try:
+                response = analyzer.ai_assistant.process_question("Explain my health score", results)
+                st.session_state.chat_history.append(("Explain my health score", response))
+                st.rerun()
+            except Exception as e:
+                st.error(f"AI response error: Please try again.")
     
     with col2:
-        if st.button("💥 What if markets crash?", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("What if markets crash?", results)
-            st.session_state.chat_history.append(("What if markets crash?", response))
+        if st.button("💥 What if markets crash?", key="crash_btn", use_container_width=True):
+            try:
+                response = analyzer.ai_assistant.process_question("What if markets crash?", results)
+                st.session_state.chat_history.append(("What if markets crash?", response))
+                st.rerun()
+            except Exception as e:
+                st.error(f"AI response error: Please try again.")
         
-        if st.button("🛠️ How can I improve?", use_container_width=True):
-            response = analyzer.ai_assistant.process_question("How can I improve?", results)
-            st.session_state.chat_history.append(("How can I improve?", response))
+        if st.button("🛠️ How can I improve?", key="improve_btn", use_container_width=True):
+            try:
+                response = analyzer.ai_assistant.process_question("How can I improve?", results)
+                st.session_state.chat_history.append(("How can I improve?", response))
+                st.rerun()
+            except Exception as e:
+                st.error(f"AI response error: Please try again.")
     
     # Custom question
     with st.expander("💬 Ask a Custom Question"):
         custom_question = st.text_input("Your question:", placeholder="Ask about your portfolio...")
-        if st.button("Ask AI") and custom_question:
-            response = analyzer.ai_assistant.process_question(custom_question, results)
-            st.session_state.chat_history.append((custom_question, response))
+        if st.button("Ask AI", key="custom_ai_btn") and custom_question:
+            try:
+                response = analyzer.ai_assistant.process_question(custom_question, results)
+                st.session_state.chat_history.append((custom_question, response))
+                st.rerun()
+            except Exception as e:
+                st.error(f"AI response error: Please try again.")
     
     # Chat history
     if st.session_state.chat_history:
