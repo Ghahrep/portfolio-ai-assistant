@@ -2,6 +2,7 @@ import streamlit as st
 import asyncio
 import json
 import re
+import setuptools 
 import sqlite3
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
