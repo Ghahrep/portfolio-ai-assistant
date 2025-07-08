@@ -1043,7 +1043,15 @@ if 'messages' not in st.session_state:
 if 'context' not in st.session_state:
     st.session_state.context = UserContext(user_id="streamlit_user")
 if 'chatbot' not in st.session_state:
-    st.session_state.chatbot = HybridChatbot(claude_api_key=os.getenv("ANTHROPIC_API_KEY"))
+    # Try secrets first, then environment variable
+    api_key = None
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY")
+    except:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+    st.session_state.chatbot = HybridChatbot(claude_api_key=api_key)
+if 'error_count' not in st.session_state:
+    st.session_state.error_count = 0
 if 'total_tokens_used' not in st.session_state:
     st.session_state.total_tokens_used = 0
 
@@ -1076,13 +1084,14 @@ with st.container():
         if message['role'] == 'user':
             st.markdown(f"""
             <div class="user-message">
-                <div class="user-bubble">{message['content']}</div>
+                <div class="user-bubble">{message.get('content', '')}</div>
             </div>
             """, unsafe_allow_html=True)
         else:
             routing = message.get('routing', 'unknown')
             tokens = message.get('tokens_used', 0)
             cached = message.get('cached', False)
+            content = message.get('content', message.get('text', 'No content'))  # Fallback for missing content
             
             routing_class = "claude-indicator" if routing == "claude" else "rules-indicator"
             routing_text = f"🤖 AI ({tokens} tokens)" if routing == "claude" else "⚡ Rules (0 tokens)"
@@ -1092,7 +1101,7 @@ with st.container():
             st.markdown(f"""
             <div class="bot-message">
                 <div class="bot-bubble">
-                    {message['content']}
+                    {content}
                     <div class="routing-indicator {routing_class}">{routing_text}</div>
                 </div>
             </div>
@@ -1109,7 +1118,14 @@ with col1:
         message = "60% AAPL, 30% GOOGL, 10% BONDS"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
     
@@ -1117,7 +1133,14 @@ with col1:
         message = "How can I improve my portfolio diversification strategy?"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
 
@@ -1126,7 +1149,14 @@ with col2:
         message = "how risky is my portfolio?"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
     
@@ -1134,7 +1164,14 @@ with col2:
         message = "What's the current market regime and how should I position my portfolio?"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
 
@@ -1143,7 +1180,14 @@ with col3:
         message = "optimize my portfolio"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
     
@@ -1151,7 +1195,14 @@ with col3:
         message = "What are the key risks in my portfolio that I should be aware of?"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
 
@@ -1160,7 +1211,14 @@ with col4:
         message = "what if I sell 10% AAPL and buy 10% QQQ?"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
     
@@ -1168,7 +1226,14 @@ with col4:
         message = "what can you do?"
         st.session_state.messages.append({"role": "user", "content": message})
         response = asyncio.run(st.session_state.chatbot.generate_response(message, st.session_state.context))
-        st.session_state.messages.append({"role": "assistant", **response})
+        bot_message = {
+            "role": "assistant", 
+            "content": response.get('text', 'No response'),
+            "routing": response.get('routing', 'unknown'),
+            "tokens_used": response.get('tokens_used', 0),
+            "cached": response.get('cached', False)
+        }
+        st.session_state.messages.append(bot_message)
         st.session_state.total_tokens_used += response.get('tokens_used', 0)
         st.rerun()
 
@@ -1187,8 +1252,15 @@ if send_button and user_input:
     # Generate bot response
     response = asyncio.run(st.session_state.chatbot.generate_response(user_input, st.session_state.context))
     
-    # Add bot response with routing info
-    st.session_state.messages.append({"role": "assistant", **response})
+    # Add bot response with routing info - ensure 'content' key exists
+    bot_message = {
+        "role": "assistant", 
+        "content": response.get('text', 'No response generated'),
+        "routing": response.get('routing', 'unknown'),
+        "tokens_used": response.get('tokens_used', 0),
+        "cached": response.get('cached', False)
+    }
+    st.session_state.messages.append(bot_message)
     
     # Update token count
     st.session_state.total_tokens_used += response.get('tokens_used', 0)
@@ -1293,14 +1365,26 @@ if st.session_state.context.portfolio and st.session_state.context.last_analysis
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Footer with system status
+# Footer with enhanced system status
 stats = st.session_state.chatbot.get_routing_stats()
+claude_status = "🟢 Enabled" if st.session_state.chatbot.claude.enabled else "🔴 Disabled"
+
+# Simple usage analytics (session-based)
+if 'session_start' not in st.session_state:
+    st.session_state.session_start = time.time()
+
+session_duration = int((time.time() - st.session_state.session_start) / 60)
+
 st.markdown(f"""
 <div style="text-align: center; padding: 20px; color: #666; font-size: 12px; border-top: 1px solid #eee; margin-top: 40px;">
     <p><strong>Hybrid Portfolio AI Assistant</strong> • 
-    Routing: {stats['rules_percentage']:.0f}% Rules, {stats['claude_percentage']:.0f}% AI • 
-    Total Tokens: {st.session_state.total_tokens_used} • 
-    {'Claude Enabled' if st.session_state.chatbot.claude.enabled else 'Claude Disabled'}</p>
+    Routing: {stats['rules_percentage']:.0f}% Rules ({stats['rules']} queries), {stats['claude_percentage']:.0f}% AI ({stats['claude']} queries) • 
+    Tokens Used: {st.session_state.total_tokens_used} • 
+    Claude: {claude_status} • 
+    Session: {session_duration}min</p>
     <p>⚠️ This tool is for educational purposes only and does not constitute financial advice.</p>
+    <p style="font-size: 10px; margin-top: 8px;">
+        💡 <strong>Cost Efficiency:</strong> This hybrid system saves ~{stats['rules_percentage']:.0f}% on AI costs while maintaining sophisticated analysis capabilities.
+    </p>
 </div>
 """, unsafe_allow_html=True)
